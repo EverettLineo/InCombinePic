@@ -1,0 +1,41 @@
+[package]
+name = "pintu"
+version = "0.1.0"
+description = "Windows 本地图片拼接工具：自由画布与模板布局，全本地处理"
+authors = ["Everett Lineo <everettlineo@gmail.com>"]
+license = "MIT"
+edition = "2024"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+# `_lib` 后缀用于避免 Windows 下 lib 名与 bin 名冲突
+# https://github.com/rust-lang/cargo/issues/8519
+name = "pintu_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-opener = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+# 图像管线：仅启用 v1 支持的四种格式（T0.15 实测：依赖 126→34，构建 60s→22s）
+image = { version = "0.25", default-features = false, features = [
+    "png",
+    "jpeg",
+    "webp",
+    "bmp",
+] }
+fast_image_resize = "6.1"
+kamadak-exif = "0.6"
+
+# Read the optimization guideline for more details: https://tauri.app/concept/size/#cargo-configuration
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = 3
+panic = "abort"
+strip = true

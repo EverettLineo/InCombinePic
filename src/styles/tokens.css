@@ -1,0 +1,215 @@
+/**
+ * 浅色主题设计令牌（v1 仅浅色，不提供主题切换 —— 基线 §5.1）
+ * 所有颜色、间距、字号必须取自此处，禁止在组件内写死颜色值。
+ */
+
+:root {
+  /* 背景层次 */
+  --bg-app: #f5f6f8;
+  --bg-panel: #ffffff;
+  --bg-canvas-outer: #e8eaee;
+  --bg-hover: #eef1f5;
+  --bg-active: #e3f0ff;
+
+  /* 边框与分隔 */
+  --border-subtle: #e5e7eb;
+  --border-strong: #d1d5db;
+  --border-focus: #2f7ce0;
+
+  /* 文字 */
+  --text-primary: #1f2329;
+  --text-secondary: #5c6470;
+  --text-disabled: #9aa1ab;
+  --text-inverse: #ffffff;
+
+  /* 强调色 */
+  --accent: #2f7ce0;
+  --accent-hover: #2568bd;
+  --accent-soft: #eaf2fd;
+
+  /* 语义色 */
+  --danger: #d93b3b;
+  --warning: #c47a12;
+  --success: #2e8b57;
+
+  /* 尺寸 */
+  --col-left: 272px;
+  --col-right: 320px;
+  --header-h: 44px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+
+  /* 字号 */
+  --fs-xs: 12px;
+  --fs-sm: 13px;
+  --fs-md: 14px;
+  --fs-lg: 16px;
+
+  /* 字体 */
+  --font-ui: "Microsoft YaHei UI", "Microsoft YaHei", "PingFang SC",
+    system-ui, -apple-system, sans-serif;
+  --font-mono: "Cascadia Mono", Consolas, "Courier New", monospace;
+
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: var(--font-ui);
+  font-size: var(--fs-md);
+  color: var(--text-primary);
+  background: var(--bg-app);
+  /* 桌面工具不应有文本选择的默认行为，仅在特定区域开启 */
+  user-select: none;
+  overflow: hidden;
+}
+
+button {
+  font-family: inherit;
+  font-size: var(--fs-sm);
+  cursor: pointer;
+  border: 1px solid var(--border-strong);
+  background: var(--bg-panel);
+  color: var(--text-primary);
+  border-radius: var(--radius-sm);
+  padding: 4px 10px;
+}
+
+button:hover {
+  background: var(--bg-hover);
+}
+
+button:focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 1px;
+}
+
+input,
+textarea {
+  font-family: inherit;
+  font-size: var(--fs-sm);
+  user-select: text;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  padding: 3px 6px;
+  color: var(--text-primary);
+  background: var(--bg-panel);
+}
+
+input:focus {
+  outline: 2px solid var(--border-focus);
+  outline-offset: -1px;
+  border-color: transparent;
+}
+
+/* ---------- 三栏工作区骨架（基线 §5.2：左资源 / 中画布 / 右属性） ---------- */
+
+.workspace {
+  height: 100%;
+  display: grid;
+  grid-template-rows: var(--header-h) 1fr;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 14px;
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.header__title {
+  font-size: var(--fs-md);
+  font-weight: 600;
+}
+
+.header__meta {
+  font-size: var(--fs-xs);
+  color: var(--text-secondary);
+}
+
+.header__spacer {
+  flex: 1;
+}
+
+.badge {
+  font-size: var(--fs-xs);
+  color: var(--success);
+  border: 1px solid currentColor;
+  border-radius: 10px;
+  padding: 0 8px;
+  line-height: 18px;
+}
+
+.body {
+  display: grid;
+  grid-template-columns: var(--col-left) 1fr var(--col-right);
+  min-height: 0;
+}
+
+.panel {
+  background: var(--bg-panel);
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.panel--left {
+  border-right: 1px solid var(--border-subtle);
+}
+
+.panel--right {
+  border-left: 1px solid var(--border-subtle);
+}
+
+.panel__title {
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--text-secondary);
+  letter-spacing: 0.5px;
+  padding: 10px 12px 6px;
+}
+
+.panel__body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 8px 12px;
+  color: var(--text-disabled);
+  font-size: var(--fs-sm);
+}
+
+.canvas-area {
+  background: var(--bg-canvas-outer);
+  min-height: 0;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.canvas-area__placeholder {
+  color: var(--text-secondary);
+  font-size: var(--fs-sm);
+}
+
+.error-box {
+  margin: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--danger);
+  border-radius: var(--radius-md);
+  color: var(--danger);
+  background: #fff5f5;
+  font-size: var(--fs-sm);
+}
