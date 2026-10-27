@@ -16,6 +16,8 @@
 ├─────────────────────────────────────────────────┤
 │  features/*        资源库、画布、属性、图层、模板、导出 │
 ├─────────────────────────────────────────────────┤
+│  state             三域 store（Doc / View / Library）│  ← 状态容器，不碰 IPC
+├─────────────────────────────────────────────────┤
 │  domain            文档模型、几何、变换、命令、历史   │  ← 纯 TS，零外部依赖
 └──────────────┬──────────────────────────────────┘
                │ 只经 platform 这一层
@@ -23,6 +25,8 @@
         │  platform   │◄──IPC──►│  Rust (src-tauri)│
         └─────────────┘        └──────────────────┘
 ```
+
+> `state` 层在 T1.6 引入：store 依赖 zustand，不能放进要求纯净的 `domain`；但它又是 `features` 的公共依赖，放 `app` 会造成 features → app 的反向依赖。故单列一层，方向为 `features → state → domain`。
 
 三条硬规则：
 
@@ -55,6 +59,10 @@ puzzle-tool/
 │  │  ├─ layers/            图层列表（顺序 = 堆叠）
 │  │  ├─ templates/         模板选择与填充
 │  │  └─ export/            导出面板、条带任务调度
+│  ├─ state/                ★ 三域 store（T1.6）
+│  │  ├─ docStore.ts        DocumentState + commit 入口（撤销的容器）
+│  │  ├─ viewStore.ts       缩放/平移/选中（不入历史、不持久化）
+│  │  └─ libraryStore.ts    资源库条目 + 自定义顺序 + 排序模式
 │  ├─ platform/             IPC 封装（全部 Rust 调用集中于此）
 │  ├─ ui/                   Button / Slider / NumberField / Dialog / Toast
 │  └─ styles/               浅色主题 token
@@ -262,6 +270,8 @@ interface TemplateDef {
 - 历史深度设上限（初值 100 步），超限丢最旧记录。
 - 资源库操作（导入、释放、清空）**不进历史**，与画布编辑彻底分离（基线 §11.2）。
 - 事务边界由交互层显式声明：`beginTransaction()` / `commit()`，`Esc` 触发 `abort()` 回滚到事务起点。
+
+**已落地的执行缝（T1.6）**：`docStore` 只暴露 `commit(recipe)` 一个写入口，`recipe` 必须是 `DocumentState -> DocumentState` 的纯函数；若返回同一引用则视为"无变化"，不递增 `revision`、不置脏。P4 加历史栈时只需在 `commit` 内部记录前后快照，**不需要改动任何调用点**。这层缝如果不在写功能前留好，后面每个编辑操作都要返工。
 
 ---
 

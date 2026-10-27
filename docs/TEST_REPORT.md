@@ -149,7 +149,49 @@ image = { version = "0.25.10", default-features = false,
 
 ---
 
-## TR-04 已知问题与风险
+## TR-04 工程骨架与门禁 G1 验证（对应 T1.1 / T1.3 / T1.5 / T1.7 / T1.8）
+
+**环境**：仓库根目录 `C:\TEMPs\workspace\workbuddy\🧩拼图工具`，应用版本 0.1.0。
+
+### 构建与静态检查
+
+| 检查项 | 命令 | 结果 | 状态 |
+| --- | --- | --- | --- |
+| TypeScript 类型检查 | `npm run typecheck` | 无输出（0 错误） | 通过 |
+| 前端单元测试 | `npm test` | 1 个文件 / **14 用例通过** | 通过 |
+| ESLint | `npm run lint` | 0 错误 0 警告 | 通过 |
+| Rust 单元测试 | `cargo test` | **2 用例通过** | 通过 |
+| 前端生产构建 | `npm run build` | 221.73 kB JS（gzip 69.63 kB）+ 2.99 kB CSS | 通过 |
+| Tauri release 构建 | `npx tauri build --no-bundle` | 产出 `pintu.exe`，编译 2 分 04 秒 | 通过 |
+| 应用启动 | 运行 exe 并观察 5 秒 | 进程存活（PID 18336，内存 39,912 K），未异常退出 | 通过 |
+
+### 架构边界规则有效性验证（关键）
+
+规则写进配置不等于生效。用故意违规的临时文件实测三类越界，确认 lint 能在构建期拦下：
+
+| 违规文件 | 违规内容 | lint 结果 |
+| --- | --- | --- |
+| `src/domain/probe/bad_konva.ts` | domain 内 import konva | **拦截**：`domain 层必须保持纯净…（§1 规则 1）` |
+| `src/domain/probe/bad_ipc.ts` | domain 内 import `@tauri-apps/api/core` | **拦截**：同上 |
+| `src/features/canvas/bad_ipc.ts` | features 内直接 import IPC | **拦截**：`IPC 只允许通过 src/platform 调用（§1 规则 3）` |
+
+删除探针文件后 `npm run lint` 恢复 0 错误。**结论：三条边界规则均为有效约束，不是摆设。**
+
+### 过程中遇到的真实缺陷（已修复，记录备查）
+
+| 问题 | 现象 | 根因 | 修复 |
+| --- | --- | --- | --- |
+| D-001 | `cargo build` 报 `E0433: cannot find __cmd__app_info in commands` | `#[tauri::command]` 生成的隐藏符号位于**命令所属模块内**，而 `generate_handler!` 按给出的路径查找 | 改为 `commands::app_info::app_info` 完整路径，并在 `lib.rs` 注释说明 |
+
+### 本次未覆盖
+
+- 三栏布局的像素级还原与响应式（属 T1.2 完成标准）
+- 17 寸以下小屏与 200% 缩放的排版
+- 日志、偏好持久化（T1.4 / T11.4 未开始）
+
+---
+
+## TR-05 已知问题与风险
 
 | 编号 | 问题 | 影响 | 处理 |
 | --- | --- | --- | --- |
@@ -160,6 +202,6 @@ image = { version = "0.25.10", default-features = false,
 
 ---
 
-## TR-05 尚未执行的测试（标记为未测试，不代表通过）
+## TR-06 尚未执行的测试（标记为未测试，不代表通过）
 
 基线 §16 清单中以下项当前状态为 **未测试**：环境与打包类（T0.7 WebView2 部署方式）、20,000 px 导出（T0.9）、交互与数据生命周期类（P2 之后）、导出与压力类（P10 之后）、安装/卸载（T12.7）。

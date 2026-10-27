@@ -1,25 +1,39 @@
 import { useEffect, useState } from "react";
 import { getAppInfo, normalizeError, type AppInfo, type AppErrorPayload } from "../platform/ipc";
+import { useDocStore } from "../state/docStore";
+import { useLibraryStore } from "../state/libraryStore";
+import { useViewStore } from "../state/viewStore";
+import { LIBRARY_SORT_LABELS } from "../domain/library";
 
 /**
- * 应用外壳。P1 阶段只验证：启动、三栏骨架、IPC 往返。
- * 真实功能面板在 T1.2 / T2.7 / T3.2 中逐个替换占位内容。
+ * 应用外壳。P1 阶段验证：启动、三栏骨架、IPC 往返、三域 store 接线。
+ * 真实功能面板在 T2.7（资源库）/ T3.2（画布）/ T7.x（属性）中逐个替换。
  */
 export default function App() {
   const [info, setInfo] = useState<AppInfo | null>(null);
   const [error, setError] = useState<AppErrorPayload | null>(null);
 
+  const doc = useDocStore((s) => s.doc);
+  const dirty = useDocStore((s) => s.dirty);
+  const items = useLibraryStore((s) => s.items);
+  const sortMode = useLibraryStore((s) => s.sortMode);
+  const selection = useViewStore((s) => s.selection);
+  const zoom = useViewStore((s) => s.zoom);
+
   useEffect(() => {
-    getAppInfo().then(setInfo).catch((e) => setError(normalizeError(e)));
+    getAppInfo()
+      .then(setInfo)
+      .catch((e) => setError(normalizeError(e)));
   }, []);
+
+  const hasSelection = selection.length > 0;
 
   return (
     <div className="workspace">
       <header className="header">
         <span className="header__title">{info?.name ?? "拼图工具"}</span>
-        <span className="header__meta">
-          {info ? `v${info.version}` : "正在获取版本…"}
-        </span>
+        <span className="header__meta">{info ? `v${info.version}` : "正在获取版本…"}</span>
+        {dirty ? <span className="header__meta">· 有未导出修改</span> : null}
         <span className="header__spacer" />
         {info?.offline ? <span className="badge">本地处理 · 离线可用</span> : null}
       </header>
@@ -27,16 +41,30 @@ export default function App() {
       <div className="body">
         <aside className="panel panel--left">
           <div className="panel__title">资源库</div>
-          <div className="panel__body">尚未导入图片</div>
+          <div className="panel__body">
+            {items.length === 0 ? (
+              <span>尚未导入图片</span>
+            ) : (
+              <span>
+                共 {items.length} 项 · 排序：{LIBRARY_SORT_LABELS[sortMode]}
+              </span>
+            )}
+          </div>
         </aside>
 
         <main className="canvas-area">
-          <div className="canvas-area__placeholder">画布 2400 × 1600</div>
+          <div className="canvas-area__placeholder">
+            画布 {doc.canvas.width} × {doc.canvas.height} · 视图 {Math.round(zoom * 100)}%
+          </div>
         </main>
 
         <aside className="panel panel--right">
           <div className="panel__title">属性 / 图层</div>
-          <div className="panel__body">未选中对象</div>
+          <div className="panel__body">
+            {hasSelection
+              ? `已选中 ${selection.length} 个对象`
+              : `未选中对象${doc.instances.length > 0 ? ` · 共 ${doc.instances.length} 个实例` : ""}`}
+          </div>
         </aside>
       </div>
 
