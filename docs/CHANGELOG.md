@@ -6,6 +6,34 @@
 
 ---
 
+## 2026-10-29 · P3 画布首次可见
+
+**新增**
+
+- `features/scene/`：`derive.ts`（状态→场景描述，纯函数）、`apply.ts`（唯一 Konva 适配器）、`KonvaStage.tsx`（舞台与交互）
+- `features/canvas/`：`CanvasArea`（工具条 + 空状态）、`useSceneSources`（2048px 分级解码 + 缓存）、`placement`（单张/全部放入）
+- `domain/transform.ts`：`coverCrop` / `frameCenter` / `alignFrame`
+- `domain/layout.ts`：`centerFitFrame` / `gridFrames`（初始布局）
+- `ui/ErrorBoundary`：画布渲染出错时局部降级，避免白屏
+
+**能力**
+
+- 背景：白色 / 透明（棋盘格提示）/ 纯色 / 线性渐变
+- 超出画布边界的内容在视图中被裁切
+- 滚轮锚点缩放、Space 平移、适应画布、100%、全部添加
+- 双击资源库条目放入画布
+
+**验证**
+
+- 前端用例 46 → **65 项**全通过
+- typecheck / lint 0 错误；release 构建 4 分 26 秒，启动正常
+
+**未测试**
+
+- 画布渲染的视觉效果（KI-13）、50 实例真实帧率（T3.7）
+
+---
+
 ## 2026-10-29 · P2 完成（资源库闭环）
 
 **新增**

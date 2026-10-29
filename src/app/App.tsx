@@ -1,31 +1,25 @@
 import { useEffect, useState } from "react";
-import { getAppInfo, normalizeError, type AppInfo, type AppErrorPayload } from "../platform/ipc";
-import { useDocStore } from "../state/docStore";
-import { useLibraryStore } from "../state/libraryStore";
-import { useViewStore } from "../state/viewStore";
+import { CanvasArea } from "../features/canvas/CanvasArea";
 import { LibraryPanel } from "../features/library/LibraryPanel";
+import { getAppInfo, normalizeError, type AppErrorPayload, type AppInfo } from "../platform/ipc";
+import { useDocStore } from "../state/docStore";
+import { useViewStore } from "../state/viewStore";
+import { ErrorBoundary } from "../ui/ErrorBoundary";
 
-/**
- * 应用外壳。P1 阶段验证：启动、三栏骨架、IPC 往返、三域 store 接线。
- * 真实功能面板在 T2.7（资源库）/ T3.2（画布）/ T7.x（属性）中逐个替换。
- */
+/** 应用外壳：三栏工作区（左资源 / 中画布 / 右属性），遵循基线 §5.2 */
 export default function App() {
   const [info, setInfo] = useState<AppInfo | null>(null);
   const [error, setError] = useState<AppErrorPayload | null>(null);
 
-  const doc = useDocStore((s) => s.doc);
+  const instanceCount = useDocStore((s) => s.doc.instances.length);
   const dirty = useDocStore((s) => s.dirty);
-  const itemCount = useLibraryStore((s) => s.items.length);
   const selection = useViewStore((s) => s.selection);
-  const zoom = useViewStore((s) => s.zoom);
 
   useEffect(() => {
     getAppInfo()
       .then(setInfo)
       .catch((e) => setError(normalizeError(e)));
   }, []);
-
-  const hasSelection = selection.length > 0;
 
   return (
     <div className="workspace">
@@ -40,19 +34,16 @@ export default function App() {
       <div className="body">
         <LibraryPanel />
 
-        <main className="canvas-area">
-          <div className="canvas-area__placeholder">
-            画布 {doc.canvas.width} × {doc.canvas.height} · 视图 {Math.round(zoom * 100)}%
-            {itemCount > 0 && doc.instances.length === 0 ? " · 从左侧选择图片开始排版" : ""}
-          </div>
-        </main>
+        <ErrorBoundary areaName="画布">
+          <CanvasArea />
+        </ErrorBoundary>
 
         <aside className="panel panel--right">
           <div className="panel__title">属性 / 图层</div>
           <div className="panel__body">
-            {hasSelection
+            {selection.length > 0
               ? `已选中 ${selection.length} 个对象`
-              : `未选中对象${doc.instances.length > 0 ? ` · 共 ${doc.instances.length} 个实例` : ""}`}
+              : `未选中对象${instanceCount > 0 ? ` · 共 ${instanceCount} 个实例` : ""}`}
           </div>
         </aside>
       </div>

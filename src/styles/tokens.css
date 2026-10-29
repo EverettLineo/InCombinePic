@@ -195,13 +195,62 @@ input:focus {
   min-height: 0;
   position: relative;
   display: flex;
-  align-items: center;
-  justify-content: center;
+  flex-direction: column;
+  align-items: stretch;
 }
 
-.canvas-area__placeholder {
+.canvas-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--border-subtle);
+  flex: 0 0 auto;
+}
+
+.canvas-toolbar__zoom {
+  font-size: var(--fs-xs);
   color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+  min-width: 42px;
+  text-align: right;
+}
+
+.canvas-toolbar__meta {
+  font-size: var(--fs-xs);
+  color: var(--text-secondary);
+}
+
+.canvas-toolbar__spacer {
+  flex: 1;
+}
+
+/* Konva 舞台宿主：必须有确定的宽高，否则 canvas 尺寸为 0 */
+.stage-host {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.canvas-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.canvas-empty__title {
+  font-size: var(--fs-lg);
+  color: var(--text-secondary);
+}
+
+.canvas-empty__hint {
   font-size: var(--fs-sm);
+  color: var(--text-disabled);
 }
 
 .error-box {

@@ -320,6 +320,50 @@ image = { version = "0.25.10", default-features = false,
 
 ---
 
+## TR-05D 画布渲染链路（对应 T3.2 / T3.4 / T5.1）
+
+### 分层落地
+
+```
+DocumentState（真相）
+   ↓ deriveScene（纯函数，不 import Konva）
+SceneDescriptor（节点数组，含 frame/crop/rotation/opacity）
+   ↓ syncLayer（唯一 import Konva 的适配器）
+Konva 节点树（投影，可整体重建）
+```
+
+`eslint` 的边界规则保证只有 `features/scene/**` 能 import Konva，本阶段新增的 `derive.ts` / `apply.ts` / `KonvaStage.tsx` 全部落在这个目录内。
+
+### 新增自动化用例
+
+| 文件 | 用例数 | 覆盖的关键契约 |
+| --- | --- | --- |
+| `domain/transform.test.ts` | 10 | `coverCrop`：宽裁/高裁/比例一致不裁；**不回写传入的 crop**；旋转 90 后按互换后的宽高裁；零尺寸返回 scale=0；`alignFrame` 整数对齐 |
+| `domain/layout.test.ts` | 9 | `centerFitFrame` 等比居中；`gridFrames` 结果可预测（无随机）、互不重叠、全部落在画布内、保持各自宽高比 |
+
+前端用例总数 46 → **65**（transform 10 / geometry 14 / layout 9 / document 19 / library 13）。
+
+### 三条实现决策
+
+| 决策 | 理由 |
+| --- | --- |
+| `coverCrop` 只读 crop，适配裁切不写回 | 用户裁剪与适配裁切是两层；混写会导致切换模板后丢失用户裁剪（ARCHITECTURE §4） |
+| 内容层用 `layer.clip()` 裁到画布边界 | 基线 §5.3 / §10.2：边界外内容在视图与导出中同样被裁切，不自动扩张画布 |
+| 未加载完成的图像直接跳过渲染 | 宁可暂时不画，也不要先按错误尺寸画上去再跳变；跳过数量在工具条显示为"N 张加载中" |
+
+### 未测试（不得视为通过）
+
+| 项 | 原因 |
+| --- | --- |
+| 画布实际渲染效果 | 空状态下不挂载 Konva 舞台，需导入图片并双击放入才能看到；无法自动化 |
+| 滚轮缩放锚点手感、Space 平移 | 需要真实鼠标键盘 |
+| 渐变背景、透明棋盘格的视觉正确性 | 需要肉眼确认 |
+| 50 实例下的真实帧率 | T3.7 未做，且必须用 Chrome Tracing 采样（`batchDraw` 只测入队耗时，KI-04） |
+
+→ 渲染相关统一记为 KI-13。已加 `ErrorBoundary` 包裹画布区域：Konva 渲染抛错时只降级该区域并给出"重试"，不会白屏整个应用。
+
+---
+
 ## TR-06 已知问题与风险
 
 | 编号 | 问题 | 影响 | 处理 |

@@ -9,6 +9,7 @@ import type { LibraryItem } from "../../domain/types";
 import { askUser, normalizeError } from "../../platform/ipc";
 import { useDocStore } from "../../state/docStore";
 import { useLibraryStore } from "../../state/libraryStore";
+import { placeItem } from "../canvas/placement";
 import { Thumbnail } from "./Thumbnail";
 import { useImportController } from "./useImportController";
 
@@ -172,7 +173,7 @@ export function LibraryPanel() {
       <div className="lib-hint">
         {items.length === 0
           ? "支持 PNG / JPG / WebP / BMP，可拖入文件或按 Ctrl+V 粘贴"
-          : `共 ${items.length} 项 · 拖拽可调整顺序`}
+          : `共 ${items.length} 项 · 双击放入画布 · 拖拽调整顺序`}
       </div>
 
       {error ? (
@@ -239,7 +240,12 @@ export function LibraryPanel() {
                   }
                   setPreview(it);
                 }}
-                title="点击查看较大预览，按住拖动可调整顺序"
+                onDoubleClick={() => {
+                  // 双击放入画布：先关掉单击打开的预览，避免遮挡
+                  setPreview(null);
+                  placeItem(it);
+                }}
+                title="点击查看较大预览，双击放入画布，按住拖动可调整顺序"
               >
                 <span className="lib-item__index">{idx + 1}</span>
                 <Thumbnail path={it.sourcePath} alt={it.fileName} />
