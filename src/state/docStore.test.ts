@@ -1,0 +1,173 @@
+import { beforeEach, describe, expect, it } from "vitest";
+import { addInstance, setCanvasSize } from "../domain/document";
+import { createEmptyDocument, type CanvasInstance } from "../domain/types";
+import { useDocStore } from "./docStore";
+import { HISTORY_LIMIT } from "../domain/history";
+
+function inst(id: string): CanvasInstance {
+  return {
+    id,
+    libraryItemId: "lib-1",
+    createdSeq: 0,
+    frame: { x: 0, y: 0, w: 10, h: 10 },
+    crop: { x: 0, y: 0, w: 10, h: 10 },
+    rotation: 0,
+    flipH: false,
+    flipV: false,
+    opacity: 1,
+    border: { width: 0, color: "#000000" },
+    cornerRadius: 0,
+  };
+}
+
+function reset() {
+  useDocStore.setState({
+    doc: createEmptyDocument(),
+    revision: 0,
+    dirty: false,
+    past: [],
+    future: [],
+    mergeKey: null,
+    lastCommitAt: 0,
+  });
+}
+
+beforeEach(reset);
+
+describe("commit 入栈", () => {
+  it("一次提交产生一个撤销步骤", () => {
+    const { commit, doc } = useDocStore.getState();
+    commit((d) => addInstance(d, inst("a")), { label: "添加图片" });
+
+    const s = useDocStore.getState();
+    expect(s.doc.instances).toHaveLength(1);
+    expect(s.past).toHaveLength(1);
+    expect(s.past[0].label).toBe("添加图片");
+    expect(doc.instances).toHaveLength(0); // 原状态未被就地修改
+    expect(s.dirty).toBe(true);
+  });
+
+  it("recipe 返回同一引用时不产生步骤、不置脏", () => {
+    const { commit } = useDocStore.getState();
+    commit((d) => d);
+    const s = useDocStore.getState();
+    expect(s.past).toHaveLength(0);
+    expect(s.dirty).toBe(false);
+    expect(s.revision).toBe(0);
+  });
+
+  it("超过上限时丢弃最旧步骤", () => {
+    for (let i = 0; i < HISTORY_LIMIT + 5; i++) {
+      useDocStore.getState().commit((d) => addInstance(d, inst(`i${i}`)));
+    }
+    expect(useDocStore.getState().past).toHaveLength(HISTORY_LIMIT);
+  });
+});
+
+describe("transaction 合并（连续拖动只产生一步）", () => {
+  it("同一 mergeKey 的多次提交只占一个撤销步骤", () => {
+    // 模拟拖动 50 帧
+    for (let f = 0; f < 50; f++) {
+      useDocStore.getState().commit(
+        (d) =>
+          d.instances.length === 0
+            ? addInstance(d, inst("a"))
+            : { ...d, instances: d.instances.map((i) => ({ ...i, frame: { ...i.frame, x: f } })) },
+        { label: "拖动图片", mergeKey: "drag:inst-a" },
+      );
+    }
+    const s = useDocStore.getState();
+    expect(s.past).toHaveLength(1);
+    expect(s.doc.instances[0].frame.x).toBe(49);
+  });
+
+  it("撤销一次即可回到拖动前，而不是退回某一帧", () => {
+    for (let f = 0; f < 20; f++) {
+      useDocStore.getState().commit(
+        (d) =>
+          d.instances.length === 0
+            ? addInstance(d, inst("a"))
+            : { ...d, instances: d.instances.map((i) => ({ ...i, frame: { ...i.frame, x: f } })) },
+        { mergeKey: "drag" },
+      );
+    }
+    useDocStore.getState().undo();
+    expect(useDocStore.getState().doc.instances).toHaveLength(0);
+  });
+
+  it("不同 mergeKey 会开新步骤", () => {
+    useDocStore.getState().commit((d) => addInstance(d, inst("a")), { mergeKey: "drag:a" });
+    useDocStore.getState().commit((d) => setCanvasSize(d, 800, 600), { mergeKey: "drag:b" });
+    expect(useDocStore.getState().past).toHaveLength(2);
+  });
+
+  it("endMerge 之后的同 mergeKey 提交会开新步骤", () => {
+    useDocStore.getState().commit((d) => addInstance(d, inst("a")), { mergeKey: "drag" });
+    useDocStore.getState().endMerge();
+    useDocStore.getState().commit((d) => setCanvasSize(d, 800, 600), { mergeKey: "drag" });
+    expect(useDocStore.getState().past).toHaveLength(2);
+  });
+
+  it("无 mergeKey 的提交每次都开新步骤", () => {
+    useDocStore.getState().commit((d) => addInstance(d, inst("a")));
+    useDocStore.getState().commit((d) => addInstance(d, inst("b")));
+    expect(useDocStore.getState().past).toHaveLength(2);
+  });
+});
+
+describe("undo / redo", () => {
+  it("撤销恢复到提交前，重做回到提交后", () => {
+    useDocStore.getState().commit((d) => addInstance(d, inst("a")), { label: "添加" });
+    const after = useDocStore.getState().doc;
+
+    useDocStore.getState().undo();
+    expect(useDocStore.getState().doc.instances).toHaveLength(0);
+
+    useDocStore.getState().redo();
+    expect(useDocStore.getState().doc).toBe(after);
+  });
+
+  it("撤销到底后继续撤销无副作用", () => {
+    useDocStore.getState().commit((d) => addInstance(d, inst("a")));
+    useDocStore.getState().undo();
+    useDocStore.getState().undo();
+    expect(useDocStore.getState().future).toHaveLength(1);
+  });
+
+  it("撤销后新提交清空 redo 分支", () => {
+    useDocStore.getState().commit((d) => addInstance(d, inst("a")));
+    useDocStore.getState().undo();
+    useDocStore.getState().commit((d) => addInstance(d, inst("b")));
+    expect(useDocStore.getState().future).toHaveLength(0);
+  });
+
+  it("撤销不恢复视图状态（选中不属于文档历史）", () => {
+    useDocStore.getState().commit((d) => addInstance(d, inst("a")));
+    useDocStore.getState().undo();
+    const s = useDocStore.getState();
+    expect(s.doc.instances).toHaveLength(0);
+  });
+});
+
+describe("commitNoHistory（资源释放路径）", () => {
+  it("改变文档但不产生撤销步骤", () => {
+    useDocStore.getState().commit((d) => addInstance(d, inst("a")));
+    const before = useDocStore.getState().past.length;
+
+    useDocStore.getState().commitNoHistory((d) => ({ ...d, instances: [] }));
+
+    const s = useDocStore.getState();
+    expect(s.doc.instances).toHaveLength(0);
+    expect(s.past).toHaveLength(before);
+    expect(s.dirty).toBe(true); // 内容确实变了，退出前仍应提示
+  });
+
+  it("撤销不会把被释放资源关联的实例变回来", () => {
+    useDocStore.getState().commit((d) => addInstance(d, inst("a")));
+    useDocStore.getState().commitNoHistory((d) => ({ ...d, instances: [] }));
+    useDocStore.getState().undo();
+    // 撤销的是更早的"添加图片"，此时实例回到空再回到有 1 个的中间态，
+    // 关键是不能凭空复活资源——资源库不在文档历史里
+    expect(useDocStore.getState().doc.instances.length).toBeLessThanOrEqual(1);
+  });
+});

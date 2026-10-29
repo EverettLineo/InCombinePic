@@ -6,6 +6,32 @@
 
 ---
 
+## 2026-10-29 · P4 撤销/重做
+
+**新增**
+
+- `domain/history.ts`：快照式历史栈（入栈/撤销/重做/上限/标签）
+- `docStore` 扩展：`past`/`future`、`commit(recipe, {label, mergeKey})`、`endMerge()`、`undo()`、`redo()`
+- `app/useUndoShortcuts`：`Ctrl+Z` 撤销、`Ctrl+Y` / `Ctrl+Shift+Z` 重做，输入控件内不接管
+- 标题栏撤销/重做按钮（禁用态 + "撤销：<操作名>" 提示）
+- ADR-0003（画布数据模型）、ADR-0004（撤销快照模型与顺序前移）
+
+**关键设计**
+
+- 合并窗口 1200ms + `mergeKey`：连续拖动 50 帧只产生 **1 个**撤销步骤
+- `commitNoHistory` 独立通道：资源释放改文档但不入栈（基线 §11.2）
+
+**验证**
+
+- 前端用例 65 → **90 项**（history 11 + docStore 14）
+- typecheck / lint 0 错误；release 构建 3 分 33 秒，启动正常
+
+**未测试**
+
+- 快捷键与按钮的实际响应（KI-14）
+
+---
+
 ## 2026-10-29 · P3 完成（画布性能基线）
 
 **新增**
