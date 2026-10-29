@@ -19,6 +19,12 @@ export interface DocStore {
    * recipe 必须是纯函数；若返回同一引用则视为"无变化"，不递增 revision、不置脏。
    */
   commit: (recipe: (doc: DocumentState) => DocumentState) => void;
+  /**
+   * 由资源释放等外部动作引起的文档变化，**不进入撤销历史**（基线 §6.6、§11.2）。
+   * 目前与 commit 行为相同（历史栈尚未实现），但语义必须分开表达：
+   * P4 加历史栈时，只有 commit 会入栈，这里必须遗漏在外。
+   */
+  commitNoHistory: (recipe: (doc: DocumentState) => DocumentState) => void;
   /** 导出成功后调用：清除脏标记（判定规则见 T11.3） */
   markExported: () => void;
   /** 清空画布（不重置资源库） */
@@ -37,8 +43,16 @@ export const useDocStore = create<DocStore>((set, get) => ({
     set((s) => ({ doc: next, revision: s.revision + 1, dirty: true }));
   },
 
-  markExported: () => set({ dirty: false }),
+  commitNoHistory: (recipe) => {
+    const prev = get().doc;
+    const next = recipe(prev);
+    if (next === prev) return;
+    // 资源释放会真实改变画布内容（移除关联实例），因此仍需置脏——
+    // 否则用户可能带着已变化的结果退出而不被提示。
+    set((s) => ({ doc: next, revision: s.revision + 1, dirty: true }));
+  },
 
+  markExported: () => set({ dirty: false }),
   reset: () =>
     set((s) => ({
       doc: createEmptyDocument(),

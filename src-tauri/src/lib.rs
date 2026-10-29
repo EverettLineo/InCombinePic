@@ -15,7 +15,8 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::app_info::app_info,
             commands::import::probe_files,
-            commands::import::prepare_thumbnail
+            commands::import::prepare_thumbnail,
+            commands::clipboard::read_clipboard_image
         ])
         .run(tauri::generate_context!())
         .expect("应用启动失败");

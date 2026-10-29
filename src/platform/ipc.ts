@@ -4,6 +4,7 @@
  */
 
 import { convertFileSrc, invoke } from "@tauri-apps/api/core";
+import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { ask, open } from "@tauri-apps/plugin-dialog";
 
 /** 与 src-tauri/src/error.rs 的 ErrorCode 保持一致 */
@@ -130,4 +131,30 @@ export async function prepareThumbnail(path: string, maxEdge: number): Promise<T
  */
 export function toAssetUrl(filePath: string): string {
   return convertFileSrc(filePath);
+}
+
+// ---------- 拖放与剪贴板导入 ----------
+
+/**
+ * 监听来自操作系统的文件拖放。
+ *
+ * 这是 WebView 层面的 OS 级拖放，与页面内 HTML5 拖拽（画布内拖图、列表内排序）互不干扰。
+ * 返回取消监听的函数。
+ */
+export async function onFileDrop(
+  handler: (paths: string[]) => void,
+): Promise<() => void> {
+  const unlisten = await getCurrentWebview().onDragDropEvent((event) => {
+    if (event.payload.type === "drop") {
+      const paths = event.payload.paths ?? [];
+      if (paths.length > 0) handler(paths);
+    }
+  });
+  return unlisten;
+}
+
+/** 读取剪贴板图片并落成临时文件；剪贴板中没有图片时返回 null */
+export async function readClipboardImage(): Promise<string | null> {
+  const r = await invoke<{ path: string } | null>("read_clipboard_image");
+  return r?.path ?? null;
 }

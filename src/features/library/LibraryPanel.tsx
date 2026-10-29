@@ -1,10 +1,16 @@
-import { useState } from "react";
-import { LIBRARY_SORT_LABELS } from "../../domain/library";
+import { useRef, useState } from "react";
+import {
+  LIBRARY_SORT_LABELS,
+  LIBRARY_SORT_MODES,
+  type LibrarySortMode,
+} from "../../domain/library";
+import { removeAllInstances, removeInstancesByLibraryItem } from "../../domain/document";
 import type { LibraryItem } from "../../domain/types";
-import { normalizeError, type AppErrorPayload } from "../../platform/ipc";
+import { askUser, normalizeError } from "../../platform/ipc";
+import { useDocStore } from "../../state/docStore";
 import { useLibraryStore } from "../../state/libraryStore";
-import { importImages, type ImportReport } from "./importFlow";
 import { Thumbnail } from "./Thumbnail";
+import { useImportController } from "./useImportController";
 
 function formatSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -12,33 +18,126 @@ function formatSize(bytes: number): string {
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 }
 
-/** 资源库面板：导入入口 + 条目列表 + 导入结果汇总 */
+const SOURCE_LABEL: Record<string, string> = {
+  picker: "文件选择",
+  drop: "拖放",
+  clipboard: "剪贴板",
+};
+
+/** 资源库面板：导入入口 + 排序 + 条目列表 + 释放/清空 + 较大预览 */
 export function LibraryPanel() {
   const items = useLibraryStore((s) => s.items);
   const sortMode = useLibraryStore((s) => s.sortMode);
+  const setSortMode = useLibraryStore((s) => s.setSortMode);
   const getSorted = useLibraryStore((s) => s.getSorted);
+  const moveItem = useLibraryStore((s) => s.moveItem);
+  const removeItem = useLibraryStore((s) => s.removeItem);
+  const clearLibrary = useLibraryStore((s) => s.clear);
 
-  const [busy, setBusy] = useState(false);
-  const [report, setReport] = useState<ImportReport | null>(null);
-  const [error, setError] = useState<AppErrorPayload | null>(null);
-  /** 点击条目查看较大预览（基线 §6.5：不依赖悬停才能查看） */
+  const doc = useDocStore((s) => s.doc);
+  const commitNoHistory = useDocStore((s) => s.commitNoHistory);
+
+  const { report, busy, error, runPicker } = useImportController();
+
   const [preview, setPreview] = useState<LibraryItem | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  /** 拖拽排序的高亮目标行 */
+  const [dragOver, setDragOver] = useState<number | null>(null);
+  const dragRef = useRef<{ from: number; active: boolean; over: number | null }>({
+    from: -1,
+    active: false,
+    over: null,
+  });
+  /** 拖动结束后要吞掉随之而来的 click，避免误触预览 */
+  const suppressClickRef = useRef(false);
 
   const sorted = getSorted();
 
-  async function onImport() {
-    if (busy) return;
-    setBusy(true);
-    setError(null);
-    setReport(null);
+  /** 释放单个资源：级联移除画布实例，且不进入撤销历史（基线 §6.6、§11.2） */
+  async function onRelease(it: LibraryItem) {
+    const linked = doc.instances.filter((i) => i.libraryItemId === it.id).length;
+    const msg =
+      linked > 0
+        ? `释放「${it.fileName}」？\n\n画布上与之关联的 ${linked} 个实例也会被移除。\n释放资源不可撤销。`
+        : `释放「${it.fileName}」？\n\n释放资源不可撤销。`;
+
+    let confirmed = false;
     try {
-      const r = await importImages();
-      setReport(r);
+      confirmed = await askUser(msg, "释放", "取消");
     } catch (e) {
-      setError(normalizeError(e));
-    } finally {
-      setBusy(false);
+      setActionError(normalizeError(e).message);
+      return;
     }
+    if (!confirmed) return; // 取消时任何数据都不得变化
+
+    commitNoHistory((d) => removeInstancesByLibraryItem(d, [it.id]));
+    removeItem(it.id);
+    if (preview?.id === it.id) setPreview(null);
+  }
+
+  /** 清空资源库：批量释放，二次确认（基线 §6.6） */
+  async function onClearAll() {
+    if (items.length === 0) return;
+    const linked = doc.instances.length;
+    const msg =
+      `清空资源库？共 ${items.length} 项` +
+      (linked > 0 ? `，画布上 ${linked} 个关联实例也会被移除` : "") +
+      `。\n\n此操作不可撤销。`;
+
+    let confirmed = false;
+    try {
+      confirmed = await askUser(msg, "清空", "取消");
+    } catch (e) {
+      setActionError(normalizeError(e).message);
+      return;
+    }
+    if (!confirmed) return;
+
+    // 画布尺寸与背景属于文档设置，清空资源库不应重置它们
+    commitNoHistory((d) => removeAllInstances(d));
+    clearLibrary();
+    setPreview(null);
+  }
+
+  /**
+   * 列表排序用手写指针事件，而不是 HTML5 draggable。
+   *
+   * 原因：Windows 上 Tauri 启用原生文件拖放（dragDropEnabled，文件路径只能由原生层给出）
+   * 会屏蔽页面内的 HTML5 拖拽事件，两者不能共存。文件拖入是基线硬需求，
+   * 所以排序改为自己处理 pointerdown/move/up。
+   */
+  function beginReorder(e: React.PointerEvent<HTMLLIElement>, index: number) {
+    if (e.button !== 0) return;
+    const startY = e.clientY;
+    dragRef.current = { from: index, active: false, over: null };
+
+    const onMove = (ev: PointerEvent) => {
+      if (!dragRef.current.active) {
+        // 4px 死区：区分"点击查看预览"和"拖动排序"
+        if (Math.abs(ev.clientY - startY) < 4) return;
+        dragRef.current.active = true;
+      }
+      const el = document.elementFromPoint(ev.clientX, ev.clientY) as HTMLElement | null;
+      const row = el?.closest("li[data-lib-index]") as HTMLElement | null;
+      const over = row ? Number(row.dataset.libIndex) : null;
+      dragRef.current.over = over;
+      setDragOver(over);
+    };
+
+    const onUp = () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      const { from, active, over } = dragRef.current;
+      if (active) {
+        suppressClickRef.current = true;
+        if (over !== null && over !== from) moveItem(from, over);
+      }
+      dragRef.current = { from: -1, active: false, over: null };
+      setDragOver(null);
+    };
+
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
   }
 
   return (
@@ -46,12 +145,34 @@ export function LibraryPanel() {
       <div className="panel__title">资源库</div>
 
       <div className="lib-toolbar">
-        <button onClick={onImport} disabled={busy}>
+        <button onClick={runPicker} disabled={busy}>
           {busy ? "正在导入…" : "导入图片"}
         </button>
-        <span className="lib-toolbar__meta">
-          {items.length > 0 ? `${items.length} 项 · ${LIBRARY_SORT_LABELS[sortMode]}` : "支持 PNG/JPG/WebP/BMP"}
-        </span>
+        <select
+          className="lib-sort"
+          value={sortMode}
+          onChange={(e) => setSortMode(e.target.value as LibrarySortMode)}
+          disabled={items.length === 0}
+          title="排序方式"
+        >
+          {LIBRARY_SORT_MODES.map((m) => (
+            <option key={m} value={m}>
+              {LIBRARY_SORT_LABELS[m]}
+            </option>
+          ))}
+        </select>
+        <span className="lib-toolbar__spacer" />
+        {items.length > 0 ? (
+          <button className="btn-quiet" onClick={onClearAll} title="清空资源库">
+            清空
+          </button>
+        ) : null}
+      </div>
+
+      <div className="lib-hint">
+        {items.length === 0
+          ? "支持 PNG / JPG / WebP / BMP，可拖入文件或按 Ctrl+V 粘贴"
+          : `共 ${items.length} 项 · 拖拽可调整顺序`}
       </div>
 
       {error ? (
@@ -61,18 +182,24 @@ export function LibraryPanel() {
         </div>
       ) : null}
 
+      {actionError ? (
+        <div className="report report--error">
+          <div>{actionError}</div>
+        </div>
+      ) : null}
+
       {report ? (
         <div className="report">
           {report.cancelled ? (
-            <div>已取消本次导入</div>
+            <div>已取消{SOURCE_LABEL[report.source]}导入</div>
           ) : (
-            <>
-              <div>已导入 {report.addedCount} 张</div>
-              {report.skippedDuplicateCount > 0 ? (
-                <div>跳过重复文件 {report.skippedDuplicateCount} 个</div>
-              ) : null}
-            </>
+            <div>
+              {SOURCE_LABEL[report.source]}导入：成功 {report.addedCount} 张
+            </div>
           )}
+          {report.skippedDuplicateCount > 0 ? (
+            <div>跳过重复文件 {report.skippedDuplicateCount} 个</div>
+          ) : null}
           {report.failures.length > 0 ? (
             <div className="report__failures">
               <div className="report__failures-title">
@@ -99,10 +226,20 @@ export function LibraryPanel() {
           <ul className="lib-list">
             {sorted.map((it, idx) => (
               <li
-                className={`lib-item${preview?.id === it.id ? " lib-item--active" : ""}`}
+                className={`lib-item${preview?.id === it.id ? " lib-item--active" : ""}${
+                  dragOver === idx ? " lib-item--drop-target" : ""
+                }`}
                 key={it.id}
-                onClick={() => setPreview(it)}
-                title="点击查看较大预览"
+                data-lib-index={idx}
+                onPointerDown={(e) => beginReorder(e, idx)}
+                onClick={() => {
+                  if (suppressClickRef.current) {
+                    suppressClickRef.current = false;
+                    return;
+                  }
+                  setPreview(it);
+                }}
+                title="点击查看较大预览，按住拖动可调整顺序"
               >
                 <span className="lib-item__index">{idx + 1}</span>
                 <Thumbnail path={it.sourcePath} alt={it.fileName} />
@@ -116,6 +253,16 @@ export function LibraryPanel() {
                     {it.hasAlpha ? " · 含透明" : ""}
                   </span>
                 </span>
+                <button
+                  className="lib-item__release"
+                  title="释放该资源"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    void onRelease(it);
+                  }}
+                >
+                  ×
+                </button>
               </li>
             ))}
           </ul>

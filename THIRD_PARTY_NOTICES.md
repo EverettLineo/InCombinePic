@@ -31,6 +31,7 @@
 | `image` | 待锁定 | Apache-2.0 | 保留声明，附 NOTICE |
 | `fast_image_resize` | 6.1.0（实测） | Apache-2.0 | 同上 |
 | `exif-rs`（`kamadak-exif`） | 0.6.1（实测） | BSD-2-Clause | 保留版权声明 |
+| `arboard` | 3.x（实测） | MIT 或 Apache-2.0 | 剪贴板图片读取；保留版权与许可文本 |
 
 ## 明确排除
 

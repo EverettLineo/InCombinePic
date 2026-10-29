@@ -1,6 +1,9 @@
 /**
  * 导入流程编排（基线 §6.2 / §6.3 / §6.4）。
  *
+ * 三种入口（文件选择器 / 拖放 / 剪贴板）最终都汇入 `importPaths`，
+ * 共用同一套判重、预警、失败汇总逻辑。不允许任何入口另开一条特殊路径。
+ *
  * 三条不可退让的规则：
  * 1. 单文件失败不拖垮整批 —— 其余文件照常入库，最后汇总失败原因；
  * 2. 同路径才判重，不比较内容哈希（基线 §6.4 明确排除）；
@@ -11,6 +14,7 @@ import {
   askUser,
   pickImageFiles,
   probeFiles,
+  readClipboardImage,
   type ProbeOutcome,
 } from "../../platform/ipc";
 import { useLibraryStore } from "../../state/libraryStore";
@@ -35,6 +39,8 @@ export interface ImportReport {
   cancelled: boolean;
   /** 用户选中但最终未入库的总数 */
   totalSelected: number;
+  /** 本批次来源，用于结果提示 */
+  source: "picker" | "drop" | "clipboard";
 }
 
 export function baseName(p: string): string {
@@ -57,8 +63,17 @@ function toFailure(o: ProbeOutcome): ImportFailure {
   };
 }
 
-export async function importImages(): Promise<ImportReport | null> {
-  const selected = await pickImageFiles();
+interface ImportOptions {
+  /** 剪贴板来源无需判重（临时文件路径每次不同） */
+  skipDuplicateAsk?: boolean;
+}
+
+/** 统一导入入口。三种来源都走这里。 */
+export async function importPaths(
+  selected: string[],
+  source: ImportReport["source"],
+  opts: ImportOptions = {},
+): Promise<ImportReport | null> {
   if (selected.length === 0) return null;
 
   const store = useLibraryStore.getState();
@@ -67,11 +82,10 @@ export async function importImages(): Promise<ImportReport | null> {
 
   let paths = selected;
   let skippedDuplicateCount = 0;
-  let addAsNew = true;
 
-  if (duplicates.length > 0) {
+  if (duplicates.length > 0 && !opts.skipDuplicateAsk) {
     // 基线 §6.4：询问跳过或再次添加。按整批询问，避免逐个弹窗打断操作。
-    addAsNew = await askUser(
+    const addAsNew = await askUser(
       `有 ${duplicates.length} 个文件已在资源库中（同一来源路径）。\n\n选择"再次添加"会为它们各创建独立条目；选择"跳过"则只导入新文件。`,
       "再次添加",
       "跳过这些文件",
@@ -89,6 +103,7 @@ export async function importImages(): Promise<ImportReport | null> {
       failures: [],
       cancelled: false,
       totalSelected: selected.length,
+      source,
     };
   }
 
@@ -116,6 +131,7 @@ export async function importImages(): Promise<ImportReport | null> {
         failures,
         cancelled: true,
         totalSelected: selected.length,
+        source,
       };
     }
   }
@@ -143,5 +159,25 @@ export async function importImages(): Promise<ImportReport | null> {
     failures,
     cancelled: false,
     totalSelected: selected.length,
+    source,
   };
+}
+
+/** 入口一：系统文件选择器 */
+export async function importImages(): Promise<ImportReport | null> {
+  const paths = await pickImageFiles();
+  if (paths.length === 0) return null;
+  return importPaths(paths, "picker");
+}
+
+/** 入口二：从窗口拖入文件（基线 §6.2） */
+export async function importFromDrop(paths: string[]): Promise<ImportReport | null> {
+  return importPaths(paths, "drop");
+}
+
+/** 入口三：剪贴板图片（只入库，不自动放到画布，基线 §6.2） */
+export async function importFromClipboard(): Promise<ImportReport | null> {
+  const path = await readClipboardImage();
+  if (!path) return null;
+  return importPaths([path], "clipboard", { skipDuplicateAsk: true });
 }

@@ -85,6 +85,12 @@ export function removeInstancesByLibraryItem(
   return next.length === doc.instances.length ? doc : { ...doc, instances: next };
 }
 
+/** 清空画布上的全部实例，但保留画布尺寸、背景、间距等文档设置 */
+export function removeAllInstances(doc: DocumentState): DocumentState {
+  if (doc.instances.length === 0) return doc;
+  return { ...doc, instances: [] };
+}
+
 export function updateInstance(
   doc: DocumentState,
   id: Id,

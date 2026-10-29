@@ -4,6 +4,7 @@ import {
   createInstance,
   instanceCountByLibraryItem,
   nextCreatedSeq,
+  removeAllInstances,
   removeInstances,
   removeInstancesByLibraryItem,
   reorderInstance,
@@ -179,6 +180,25 @@ describe("setCrop", () => {
     doc = setCrop(doc, "a", { x: 400, y: 300, w: 0, h: 0 }, { w: 400, h: 300 });
     expect(doc.instances[0].crop.w).toBeGreaterThan(0);
     expect(doc.instances[0].crop.h).toBeGreaterThan(0);
+  });
+});
+
+describe("removeAllInstances", () => {
+  it("清空实例但保留画布尺寸与背景（清空资源库不应重置文档设置）", () => {
+    let doc = createEmptyDocument();
+    doc = setCanvasSize(doc, 1800, 1200);
+    doc = addInstance(doc, inst("a", 0));
+
+    const next = removeAllInstances(doc);
+    expect(next.instances).toHaveLength(0);
+    expect(next.canvas.width).toBe(1800);
+    expect(next.canvas.height).toBe(1200);
+    expect(next.canvas.background).toEqual({ type: "white" });
+  });
+
+  it("已为空时返回同一引用", () => {
+    const doc = createEmptyDocument();
+    expect(removeAllInstances(doc)).toBe(doc);
   });
 });
 

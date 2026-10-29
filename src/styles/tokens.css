@@ -228,6 +228,68 @@ input:focus {
   color: var(--text-secondary);
 }
 
+.lib-toolbar__spacer {
+  flex: 1;
+}
+
+.lib-sort {
+  font-family: inherit;
+  font-size: var(--fs-xs);
+  color: var(--text-primary);
+  background: var(--bg-panel);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  padding: 3px 4px;
+  max-width: 104px;
+}
+
+.btn-quiet {
+  border-color: transparent;
+  background: transparent;
+  color: var(--text-secondary);
+  padding: 3px 6px;
+}
+
+.btn-quiet:hover {
+  background: var(--bg-hover);
+  color: var(--danger);
+}
+
+.lib-hint {
+  padding: 0 12px 6px;
+  font-size: var(--fs-xs);
+  color: var(--text-disabled);
+  line-height: 1.5;
+}
+
+.lib-item__release {
+  flex: 0 0 auto;
+  align-self: center;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-disabled);
+  padding: 0 6px;
+  line-height: 20px;
+  font-size: var(--fs-md);
+  visibility: hidden;
+}
+
+.lib-item:hover .lib-item__release {
+  visibility: visible;
+}
+
+.lib-item__release:hover {
+  color: var(--danger);
+  border-color: var(--border-strong);
+  background: var(--bg-panel);
+}
+
+.lib-item--drop-target {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  background: var(--accent-soft);
+}
+
 .panel__body--list {
   padding: 0;
   color: inherit;
