@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { CanvasArea } from "../features/canvas/CanvasArea";
 import { LibraryPanel } from "../features/library/LibraryPanel";
+import { InspectorPanel } from "../features/inspector/InspectorPanel";
 import { BenchScreen } from "../features/scene/BenchScreen";
 import {
   getAppInfo,
@@ -10,7 +11,6 @@ import {
   type AppInfo,
 } from "../platform/ipc";
 import { useDocStore } from "../state/docStore";
-import { useViewStore } from "../state/viewStore";
 import { ErrorBoundary } from "../ui/ErrorBoundary";
 import { useUndoShortcuts } from "./useUndoShortcuts";
 import { nextUndoLabel } from "../domain/history";
@@ -22,13 +22,11 @@ export default function App() {
   /** null = 尚未判定，避免基准模式未判定时就渲染主界面又切走 */
   const [bench, setBench] = useState<boolean | null>(null);
 
-  const instanceCount = useDocStore((s) => s.doc.instances.length);
   const dirty = useDocStore((s) => s.dirty);
   const past = useDocStore((s) => s.past);
   const future = useDocStore((s) => s.future);
   const undo = useDocStore((s) => s.undo);
   const redo = useDocStore((s) => s.redo);
-  const selection = useViewStore((s) => s.selection);
 
   useUndoShortcuts();
 
@@ -83,12 +81,7 @@ export default function App() {
         </ErrorBoundary>
 
         <aside className="panel panel--right">
-          <div className="panel__title">属性 / 图层</div>
-          <div className="panel__body">
-            {selection.length > 0
-              ? `已选中 ${selection.length} 个对象`
-              : `未选中对象${instanceCount > 0 ? ` · 共 ${instanceCount} 个实例` : ""}`}
-          </div>
+          <InspectorPanel />
         </aside>
       </div>
 

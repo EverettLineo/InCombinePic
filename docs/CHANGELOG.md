@@ -6,6 +6,33 @@
 
 ---
 
+## 2026-10-29 · P5 画布交互（拖动/选中/属性）
+
+**新增**
+
+- `domain/document.ts`：`hitTest`（顶层优先）、`filterAliveSelection`（清理失效选中）
+- `KonvaStage` 交互：单击命中、Ctrl/Shift 多选、点空白取消选择、拖动移动、选中虚线框
+- `useCanvasShortcuts`：`Delete` 删除选中实例（可撤销）、`Esc` 取消选择
+- `InspectorPanel` + `ui/NumberField`：X/Y/W/H 数值编辑（Enter/失焦提交，Esc 回滚）
+- 工具条显示选中数量
+
+**关键实现**
+
+- 拖动走 `mergeKey: "drag:<ids>"`，`pointerup` 调 `endMerge()` → 一次拖动只产生 1 个撤销步骤
+- 事件回调与最新 doc/view 存入 `useRef`，避免闭包旧值导致"第二次拖动跳回旧位置"
+
+**验证**
+
+- 前端用例 90 → **95 项**
+- typecheck / lint 0 错误（0 警告）；release 构建 4 分 08 秒，启动正常
+
+**未完成**
+
+- 控制点缩放（T5.4 剩余）、多选批量对齐（P6）
+- 交互实操验证（KI-15）
+
+---
+
 ## 2026-10-29 · P4 撤销/重做
 
 **新增**

@@ -7,7 +7,7 @@
 
 import Konva from "konva";
 import { coverCrop, frameCenter } from "../../domain/transform";
-import type { Background, CanvasSpec } from "../../domain/types";
+import type { Background, CanvasSpec, DocumentState, Id } from "../../domain/types";
 import type { SceneDescriptor } from "./derive";
 
 /** 棋盘格仅用于透明背景的预览提示，不是用户可选的背景类型（基线 §10.1） */
@@ -133,4 +133,37 @@ export function syncCanvasOutline(layer: Konva.Layer, canvas: CanvasSpec) {
   rect.position({ x: 0, y: 0 });
   rect.width(canvas.width);
   rect.height(canvas.height);
+}
+
+/**
+ * 选中高亮：在覆盖层为每个选中实例画一个描边框。
+ * 数量最多几个，直接全量重建即可，无需 diff。
+ */
+export function syncSelection(
+  layer: Konva.Layer,
+  doc: DocumentState,
+  selection: readonly Id[],
+): void {
+  for (const child of layer.getChildren()) {
+    if (child.id().startsWith("sel-")) child.destroy();
+  }
+  if (selection.length === 0) return;
+
+  const selected = new Set(selection);
+  for (const it of doc.instances) {
+    if (!selected.has(it.id)) continue;
+    const rect = new Konva.Rect({
+      id: `sel-${it.id}`,
+      listening: false,
+      stroke: "#2f7ce0",
+      strokeWidth: 1.5,
+      strokeScaleEnabled: false,
+      dash: [4, 3],
+      x: it.frame.x,
+      y: it.frame.y,
+      width: it.frame.w,
+      height: it.frame.h,
+    });
+    layer.add(rect);
+  }
 }

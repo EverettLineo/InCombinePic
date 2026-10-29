@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from "react";
+import { filterAliveSelection, updateInstance } from "../../domain/document";
+import type { Id } from "../../domain/types";
 import { useDocStore } from "../../state/docStore";
 import { useLibraryStore } from "../../state/libraryStore";
 import { useViewStore } from "../../state/viewStore";
@@ -6,11 +8,15 @@ import { KonvaStage } from "../scene/KonvaStage";
 import { deriveScene } from "../scene/derive";
 import { placeAllItems } from "./placement";
 import { useSceneSources } from "./useSceneSources";
+import { useCanvasShortcuts } from "./useCanvasShortcuts";
 
 /** 画布区域：视图控制条 + Konva 舞台 / 空状态 */
 export function CanvasArea() {
   const doc = useDocStore((s) => s.doc);
   const items = useLibraryStore((s) => s.items);
+  const commit = useDocStore((s) => s.commit);
+  const endMerge = useDocStore((s) => s.endMerge);
+
   const zoom = useViewStore((s) => s.zoom);
   const panX = useViewStore((s) => s.panX);
   const panY = useViewStore((s) => s.panY);
@@ -19,6 +25,11 @@ export function CanvasArea() {
   const zoomAt = useViewStore((s) => s.zoomAt);
   const panBy = useViewStore((s) => s.panBy);
   const fitToViewport = useViewStore((s) => s.fitToViewport);
+  const setSelection = useViewStore((s) => s.setSelection);
+  const toggleSelection = useViewStore((s) => s.toggleSelection);
+  const clearSelection = useViewStore((s) => s.clearSelection);
+
+  useCanvasShortcuts();
 
   const sources = useSceneSources(doc, items);
   const scene = deriveScene(doc, sources);
@@ -26,21 +37,6 @@ export function CanvasArea() {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const [size, setSize] = useState({ w: 0, h: 0 });
   const fittedRef = useRef(false);
-  /** 百分比输入框的编辑中值；失焦/回车时才应用到视图 */
-  const [zoomText, setZoomText] = useState("100");
-
-  useEffect(() => {
-    setZoomText(String(Math.round(zoom * 100)));
-  }, [zoom]);
-
-  function commitZoomInput() {
-    const v = Number(zoomText);
-    if (!Number.isFinite(v) || v <= 0) {
-      setZoomText(String(Math.round(zoom * 100)));
-      return;
-    }
-    setZoom(v / 100); // 上下限由 store 统一裁剪
-  }
 
   // 首次拿到视口尺寸后自动"适应画布"，之后不再自动干预用户视图
   useEffect(() => {
@@ -60,6 +56,58 @@ export function CanvasArea() {
     fitToViewport(doc.canvas.width, doc.canvas.height, size.w, size.h);
     fittedRef.current = true;
   }, [size.w, size.h, doc.canvas.width, doc.canvas.height, fitToViewport]);
+
+  // 实例被删除（或释放资源级联删除）后，清理指向它的选中
+  useEffect(() => {
+    const alive = filterAliveSelection(doc, selection);
+    if (alive.length !== selection.length) setSelection(alive);
+  }, [doc, selection, setSelection]);
+
+  /** 点击命中：null = 点空白。additive（Ctrl/Shift）时不清除既有选择 */
+  function handleSelect(id: Id | null, additive: boolean) {
+    if (id === null) {
+      if (!additive) clearSelection();
+      return;
+    }
+    if (additive) toggleSelection(id);
+    else setSelection([id]);
+  }
+
+  /** 百分比输入框的编辑中值；失焦/回车时才应用到视图 */
+  const [zoomText, setZoomText] = useState("100");
+
+  useEffect(() => {
+    setZoomText(String(Math.round(zoom * 100)));
+  }, [zoom]);
+
+  function commitZoomInput() {
+    const v = Number(zoomText);
+    if (!Number.isFinite(v) || v <= 0) {
+      setZoomText(String(Math.round(zoom * 100)));
+      return;
+    }
+    setZoom(v / 100); // 上下限由 store 统一裁剪
+  }
+
+  /** 拖动增量提交：同一拖动过程共用一个 mergeKey，合并为一步撤销 */
+  function handleMoveSelected(dx: number, dy: number) {
+    const current = useViewStore.getState().selection;
+    if (current.length === 0) return;
+    commit(
+      (d) => {
+        let next = d;
+        for (const id of current) {
+          const it = next.instances.find((i) => i.id === id);
+          if (!it) continue;
+          next = updateInstance(next, id, {
+            frame: { ...it.frame, x: it.frame.x + dx, y: it.frame.y + dy },
+          });
+        }
+        return next;
+      },
+      { label: "拖动图片", mergeKey: `drag:${current.join(",")}` },
+    );
+  }
 
   const hasInstances = doc.instances.length > 0;
 
@@ -101,6 +149,7 @@ export function CanvasArea() {
           {doc.canvas.width} × {doc.canvas.height}
           {hasInstances ? ` · ${doc.instances.length} 个实例` : ""}
           {scene.pendingCount > 0 ? ` · ${scene.pendingCount} 张加载中` : ""}
+          {selection.length > 0 ? ` · 选中 ${selection.length} 个` : ""}
         </span>
         <span className="canvas-toolbar__spacer" />
         {items.length > 0 ? (
@@ -115,6 +164,10 @@ export function CanvasArea() {
           doc={doc}
           sources={sources}
           view={{ zoom, panX, panY, selection }}
+          selection={selection}
+          onSelect={handleSelect}
+          onMoveSelected={handleMoveSelected}
+          onEndMove={endMerge}
           onZoomAt={zoomAt}
           onPanBy={panBy}
         />

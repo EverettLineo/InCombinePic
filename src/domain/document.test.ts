@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   addInstance,
   createInstance,
+  hitTest,
   instanceCountByLibraryItem,
   nextCreatedSeq,
   removeAllInstances,
@@ -12,6 +13,7 @@ import {
   setCanvasSize,
   setCrop,
   updateInstance,
+  filterAliveSelection,
 } from "./document";
 import { createEmptyDocument, type CanvasInstance } from "./types";
 
@@ -199,6 +201,49 @@ describe("removeAllInstances", () => {
   it("已为空时返回同一引用", () => {
     const doc = createEmptyDocument();
     expect(removeAllInstances(doc)).toBe(doc);
+  });
+});
+
+describe("hitTest", () => {
+  it("命中最顶层实例（数组顺序即图层顺序）", () => {
+    let doc = createEmptyDocument();
+    doc = addInstance(doc, { ...inst("a", 0), frame: { x: 0, y: 0, w: 100, h: 100 } });
+    doc = addInstance(doc, { ...inst("b", 1), frame: { x: 50, y: 50, w: 100, h: 100 } });
+
+    // 重叠区域应命中后加入的顶层 b
+    expect(hitTest(doc, 75, 75)).toBe("b");
+    // 只有 a 覆盖的区域命中 a
+    expect(hitTest(doc, 10, 10)).toBe("a");
+    // 空白处为 null
+    expect(hitTest(doc, 400, 400)).toBeNull();
+  });
+
+  it("边界点命中（含边界）", () => {
+    let doc = createEmptyDocument();
+    doc = addInstance(doc, { ...inst("a", 0), frame: { x: 10, y: 20, w: 100, h: 50 } });
+    expect(hitTest(doc, 10, 20)).toBe("a");
+    expect(hitTest(doc, 110, 70)).toBe("a");
+  });
+
+  it("空文档返回 null", () => {
+    expect(hitTest(createEmptyDocument(), 50, 50)).toBeNull();
+  });
+});
+
+describe("filterAliveSelection", () => {
+  it("移除已不存在的实例 id（删除实例后清理选中）", () => {
+    let doc = createEmptyDocument();
+    doc = addInstance(doc, inst("a", 0));
+    doc = addInstance(doc, inst("b", 1));
+    doc = removeInstances(doc, ["a"]);
+    expect(filterAliveSelection(doc, ["a", "b"])).toEqual(["b"]);
+  });
+
+  it("不改变有效选中的顺序", () => {
+    let doc = createEmptyDocument();
+    doc = addInstance(doc, inst("a", 0));
+    doc = addInstance(doc, inst("b", 1));
+    expect(filterAliveSelection(doc, ["b", "a"])).toEqual(["b", "a"]);
   });
 });
 

@@ -181,3 +181,27 @@ export function instanceCountByLibraryItem(doc: DocumentState, libraryItemId: Id
 export function hasContent(doc: DocumentState): boolean {
   return doc.instances.length > 0;
 }
+
+/**
+ * 命中测试：返回包含该点（画布坐标）的最顶层实例 id。
+ *
+ * 从数组末尾（顶层）向前遍历——数组顺序即图层顺序（ADR-0003 决策二）。
+ * frame 是轴对齐显示框（ADR-0003 决策四），因此直接用矩形包含判定即可，
+ * 无需考虑旋转。
+ */
+export function hitTest(doc: DocumentState, x: number, y: number): Id | null {
+  for (let i = doc.instances.length - 1; i >= 0; i--) {
+    const it = doc.instances[i];
+    const f = it.frame;
+    if (x >= f.x && x <= f.x + f.w && y >= f.y && y <= f.y + f.h) {
+      return it.id;
+    }
+  }
+  return null;
+}
+
+/** 选中集合是否存在对应的实例（清理失效选中） */
+export function filterAliveSelection(doc: DocumentState, selection: readonly Id[]): Id[] {
+  const alive = new Set(doc.instances.map((i) => i.id));
+  return selection.filter((id) => alive.has(id));
+}
