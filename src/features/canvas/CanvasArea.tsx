@@ -26,6 +26,21 @@ export function CanvasArea() {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const [size, setSize] = useState({ w: 0, h: 0 });
   const fittedRef = useRef(false);
+  /** 百分比输入框的编辑中值；失焦/回车时才应用到视图 */
+  const [zoomText, setZoomText] = useState("100");
+
+  useEffect(() => {
+    setZoomText(String(Math.round(zoom * 100)));
+  }, [zoom]);
+
+  function commitZoomInput() {
+    const v = Number(zoomText);
+    if (!Number.isFinite(v) || v <= 0) {
+      setZoomText(String(Math.round(zoom * 100)));
+      return;
+    }
+    setZoom(v / 100); // 上下限由 store 统一裁剪
+  }
 
   // 首次拿到视口尺寸后自动"适应画布"，之后不再自动干预用户视图
   useEffect(() => {
@@ -60,7 +75,28 @@ export function CanvasArea() {
         <button onClick={() => setZoom(1)} title="缩放至 100%">
           100%
         </button>
-        <span className="canvas-toolbar__zoom">{Math.round(zoom * 100)}%</span>
+        <input
+          className="canvas-toolbar__zoom"
+          type="number"
+          min={5}
+          max={800}
+          step={10}
+          value={zoomText}
+          onChange={(e) => setZoomText(e.target.value)}
+          onBlur={commitZoomInput}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              commitZoomInput();
+              e.currentTarget.blur();
+            }
+            if (e.key === "Escape") {
+              setZoomText(String(Math.round(zoom * 100)));
+              e.currentTarget.blur();
+            }
+          }}
+          title="缩放百分比（5% ~ 800%）"
+        />
+        <span className="canvas-toolbar__unit">%</span>
         <span className="canvas-toolbar__meta">
           {doc.canvas.width} × {doc.canvas.height}
           {hasInstances ? ` · ${doc.instances.length} 个实例` : ""}

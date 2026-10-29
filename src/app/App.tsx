@@ -1,7 +1,14 @@
 import { useEffect, useState } from "react";
 import { CanvasArea } from "../features/canvas/CanvasArea";
 import { LibraryPanel } from "../features/library/LibraryPanel";
-import { getAppInfo, normalizeError, type AppErrorPayload, type AppInfo } from "../platform/ipc";
+import { BenchScreen } from "../features/scene/BenchScreen";
+import {
+  getAppInfo,
+  isBenchRequested,
+  normalizeError,
+  type AppErrorPayload,
+  type AppInfo,
+} from "../platform/ipc";
 import { useDocStore } from "../state/docStore";
 import { useViewStore } from "../state/viewStore";
 import { ErrorBoundary } from "../ui/ErrorBoundary";
@@ -10,6 +17,8 @@ import { ErrorBoundary } from "../ui/ErrorBoundary";
 export default function App() {
   const [info, setInfo] = useState<AppInfo | null>(null);
   const [error, setError] = useState<AppErrorPayload | null>(null);
+  /** null = 尚未判定，避免基准模式未判定时就渲染主界面又切走 */
+  const [bench, setBench] = useState<boolean | null>(null);
 
   const instanceCount = useDocStore((s) => s.doc.instances.length);
   const dirty = useDocStore((s) => s.dirty);
@@ -19,7 +28,13 @@ export default function App() {
     getAppInfo()
       .then(setInfo)
       .catch((e) => setError(normalizeError(e)));
+    isBenchRequested()
+      .then(setBench)
+      .catch(() => setBench(false));
   }, []);
+
+  if (bench === null) return null;
+  if (bench) return <BenchScreen />;
 
   return (
     <div className="workspace">

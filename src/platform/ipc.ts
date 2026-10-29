@@ -158,3 +158,13 @@ export async function readClipboardImage(): Promise<string | null> {
   const r = await invoke<{ path: string } | null>("read_clipboard_image");
   return r?.path ?? null;
 }
+
+// ---------- 渲染基准（仅 PINTU_BENCH=1 时启用） ----------
+
+export async function isBenchRequested(): Promise<boolean> {
+  return invoke<boolean>("bench_requested");
+}
+
+export async function saveBenchAndQuit(json: string): Promise<string> {
+  return invoke<string>("save_bench_and_quit", { json });
+}

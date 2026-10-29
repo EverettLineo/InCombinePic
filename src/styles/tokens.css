@@ -210,11 +210,17 @@ input:focus {
 }
 
 .canvas-toolbar__zoom {
+  width: 52px;
+  font-size: var(--fs-xs);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  padding: 2px 4px;
+}
+
+.canvas-toolbar__unit {
   font-size: var(--fs-xs);
   color: var(--text-secondary);
-  font-variant-numeric: tabular-nums;
-  min-width: 42px;
-  text-align: right;
+  margin-left: -4px;
 }
 
 .canvas-toolbar__meta {

@@ -16,7 +16,9 @@ pub fn run() {
             commands::app_info::app_info,
             commands::import::probe_files,
             commands::import::prepare_thumbnail,
-            commands::clipboard::read_clipboard_image
+            commands::clipboard::read_clipboard_image,
+            commands::bench::bench_requested,
+            commands::bench::save_bench_and_quit
         ])
         .run(tauri::generate_context!())
         .expect("应用启动失败");
