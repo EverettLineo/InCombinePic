@@ -260,6 +260,26 @@ image = { version = "0.25.10", default-features = false,
 
 ---
 
+## TR-05B 缩略图与 asset 协议（对应 T2.7）
+
+| 用例 | 验证内容 | 结果 |
+| --- | --- | --- |
+| `thumbnail_preserves_aspect_ratio_and_is_smaller` | 400×200 → 最长边 100 得 100×50，文件落盘 | 通过 |
+| `thumbnail_does_not_upscale_small_images` | 64×48 图请求 256 不回放大 | 通过 |
+| `thumbnail_of_corrupt_file_returns_error` | 坏文件报错，不产出空图 | 通过 |
+
+**构建期发现的配置契约**（值得记录，属于容易踩的坑）：
+
+| 问题 | 现象 | 根因 | 处理 |
+| --- | --- | --- | --- |
+| D-003 | `cargo test` 报 `The tauri dependency features ... does not match the allowlist` | `tauri.conf.json` 开了 `assetProtocol`，但 `Cargo.toml` 未给 tauri 开 `protocol-asset` feature | 两处必须同时开启；已在 Cargo.toml 注释说明 |
+
+**并发保护**：缩略图加载器限制同时最多 3 个解码任务。若放开，50 张 8000×6000 图同时解码的峰值内存约 9 GB（单张 RGBA 183 MB，T0.8 实测）。
+
+**未测试**：`convertFileSrc` 产出的 URL 能否在 WebView 中真正渲染出图片（需人工点开界面确认），见 KI-09。
+
+---
+
 ## TR-06 已知问题与风险
 
 | 编号 | 问题 | 影响 | 处理 |

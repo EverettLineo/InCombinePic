@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { LIBRARY_SORT_LABELS } from "../../domain/library";
+import type { LibraryItem } from "../../domain/types";
 import { normalizeError, type AppErrorPayload } from "../../platform/ipc";
 import { useLibraryStore } from "../../state/libraryStore";
 import { importImages, type ImportReport } from "./importFlow";
+import { Thumbnail } from "./Thumbnail";
 
 function formatSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -19,6 +21,8 @@ export function LibraryPanel() {
   const [busy, setBusy] = useState(false);
   const [report, setReport] = useState<ImportReport | null>(null);
   const [error, setError] = useState<AppErrorPayload | null>(null);
+  /** 点击条目查看较大预览（基线 §6.5：不依赖悬停才能查看） */
+  const [preview, setPreview] = useState<LibraryItem | null>(null);
 
   const sorted = getSorted();
 
@@ -94,8 +98,14 @@ export function LibraryPanel() {
         ) : (
           <ul className="lib-list">
             {sorted.map((it, idx) => (
-              <li className="lib-item" key={it.id}>
+              <li
+                className={`lib-item${preview?.id === it.id ? " lib-item--active" : ""}`}
+                key={it.id}
+                onClick={() => setPreview(it)}
+                title="点击查看较大预览"
+              >
                 <span className="lib-item__index">{idx + 1}</span>
+                <Thumbnail path={it.sourcePath} alt={it.fileName} />
                 <span className="lib-item__main">
                   <span className="lib-item__name" title={it.sourcePath}>
                     {it.fileName}
@@ -111,6 +121,30 @@ export function LibraryPanel() {
           </ul>
         )}
       </div>
+
+      {preview ? (
+        <div className="preview-overlay" onClick={() => setPreview(null)}>
+          <div className="preview-overlay__panel" onClick={(e) => e.stopPropagation()}>
+            <div className="preview-overlay__head">
+              <span className="preview-overlay__name" title={preview.sourcePath}>
+                {preview.fileName}
+              </span>
+              <span className="preview-overlay__dims">
+                {preview.width} × {preview.height}
+              </span>
+              <button onClick={() => setPreview(null)}>关闭</button>
+            </div>
+            <div className="preview-overlay__stage">
+              <Thumbnail
+                path={preview.sourcePath}
+                maxEdge={1024}
+                alt={preview.fileName}
+                className="preview-img"
+              />
+            </div>
+          </div>
+        </div>
+      ) : null}
     </aside>
   );
 }

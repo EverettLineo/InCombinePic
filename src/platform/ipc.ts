@@ -3,7 +3,7 @@
  * 其他层不得直接 import @tauri-apps/*，该约束由 eslint 强制。
  */
 
-import { invoke } from "@tauri-apps/api/core";
+import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 import { ask, open } from "@tauri-apps/plugin-dialog";
 
 /** 与 src-tauri/src/error.rs 的 ErrorCode 保持一致 */
@@ -108,4 +108,26 @@ export async function askUser(
     okLabel,
     cancelLabel,
   });
+}
+
+// ---------- 缩略图 ----------
+
+export interface ThumbnailResult {
+  path: string;
+  width: number;
+  height: number;
+}
+
+/** 请求（或复用缓存）显示用缩略图 */
+export async function prepareThumbnail(path: string, maxEdge: number): Promise<ThumbnailResult> {
+  return invoke<ThumbnailResult>("prepare_thumbnail", { path, maxEdge });
+}
+
+/**
+ * 本地文件路径 → 可在 WebView 中加载的 asset URL。
+ * 依赖 tauri.conf.json 的 app.security.assetProtocol（scope 限定为 $APPCACHE/**），
+ * 仅缓存目录可被加载，用户原始目录不在 scope 内。
+ */
+export function toAssetUrl(filePath: string): string {
+  return convertFileSrc(filePath);
 }

@@ -1,4 +1,5 @@
 use crate::error::{AppError, ErrorCode};
+use fast_image_resize::IntoImageView;
 use serde::Serialize;
 use std::fs;
 use std::path::Path;
@@ -203,6 +204,85 @@ pub fn probe_many(paths: &[String]) -> Vec<ProbeOutcome> {
     paths.iter().map(|p| probe_one(p)).collect()
 }
 
+// ---------- 缩略图（分级解码的第一步） ----------
+
+/// 按 EXIF 方向把像素真正转正。
+/// 只报告"方向值"而不转像素，会导致缩略图与画布显示方向不一致。
+fn apply_orientation(img: image::DynamicImage, orientation: u16) -> image::DynamicImage {
+    match orientation {
+        2 => img.fliph(),
+        3 => img.rotate180(),
+        4 => img.flipv(),
+        5 => img.rotate90().fliph(),
+        6 => img.rotate90(),
+        7 => img.rotate270().fliph(),
+        8 => img.rotate270(),
+        _ => img,
+    }
+}
+
+/// 解码并转正。探测与缩略图共用，避免两处方向处理不一致。
+pub fn decode_oriented(path: &Path) -> Result<image::DynamicImage, AppError> {
+    let img = image::ImageReader::open(path)
+        .and_then(|r| r.with_guessed_format())
+        .map_err(|e| AppError::new(ErrorCode::IoFailed, format!("无法打开图片：{e}")))?
+        .decode()
+        .map_err(|e| {
+            AppError::new(ErrorCode::DecodeFailed, format!("图片解码失败：{e}"))
+                .with_hint("文件可能已损坏或为不完整下载")
+        })?;
+    Ok(apply_orientation(img, read_orientation(path)))
+}
+
+/// 生成缩略图到指定路径，返回实际尺寸。
+///
+/// 这是"分级解码"的落地：画布与列表只需要显示尺寸的像素，
+/// 没必要把原图全量塞进内存（50 张 8000×6000 全量驻留约 9 GB）。
+pub fn make_thumbnail(src: &Path, dst: &Path, max_edge: u32) -> Result<(u32, u32), AppError> {
+    let img = decode_oriented(src)?;
+    let (w, h) = (img.width(), img.height());
+    if w == 0 || h == 0 {
+        return Err(AppError::new(ErrorCode::DecodeFailed, "图片尺寸为空"));
+    }
+
+    let max_edge = max_edge.max(16);
+    let scale = (max_edge as f64 / w.max(h) as f64).min(1.0);
+    let dw = ((w as f64 * scale).round() as u32).max(1);
+    let dh = ((h as f64 * scale).round() as u32).max(1);
+
+    // 原图已经比目标小则不放大，直接存原尺寸，避免无意义的插值模糊
+    if scale >= 1.0 {
+        img.save(dst)
+            .map_err(|e| AppError::new(ErrorCode::IoFailed, format!("缩略图写入失败：{e}")))?;
+        return Ok((w, h));
+    }
+
+    let pixel_type = img.pixel_type().ok_or_else(|| {
+        AppError::new(
+            ErrorCode::Internal,
+            "不支持的像素格式，无法生成缩略图",
+        )
+    })?;
+
+    let mut dst_image = fast_image_resize::images::Image::new(dw, dh, pixel_type);
+    let mut resizer = fast_image_resize::Resizer::new();
+    resizer
+        .resize(&img, &mut dst_image, None)
+        .map_err(|e| AppError::new(ErrorCode::Internal, format!("缩略图缩放失败：{e}")))?;
+
+    image::save_buffer_with_format(
+        dst,
+        dst_image.buffer(),
+        dw,
+        dh,
+        img.color(),
+        image::ImageFormat::Png,
+    )
+    .map_err(|e| AppError::new(ErrorCode::IoFailed, format!("缩略图写入失败：{e}")))?;
+
+    Ok((dw, dh))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -337,5 +417,42 @@ mod tests {
             let expect = matches!(o, 5 | 6 | 7 | 8);
             assert_eq!(orientation_swaps_axes(o), expect, "orientation {o}");
         }
+    }
+
+    #[test]
+    fn thumbnail_preserves_aspect_ratio_and_is_smaller() {
+        let d = tmpdir("thumb");
+        let src = d.join("big.png");
+        RgbaImage::from_pixel(400, 200, image::Rgba([10, 20, 30, 255]))
+            .save(&src)
+            .unwrap();
+        let dst = d.join("t.png");
+
+        let (w, h) = make_thumbnail(&src, &dst, 100).unwrap();
+        assert_eq!((w, h), (100, 50), "等比缩放到最长边 100");
+        assert!(dst.exists(), "缩略图文件必须落盘");
+    }
+
+    #[test]
+    fn thumbnail_does_not_upscale_small_images() {
+        let d = tmpdir("thumbsmall");
+        let src = d.join("small.png");
+        RgbaImage::from_pixel(64, 48, image::Rgba([1, 2, 3, 255]))
+            .save(&src)
+            .unwrap();
+        let dst = d.join("t.png");
+
+        let (w, h) = make_thumbnail(&src, &dst, 256).unwrap();
+        assert_eq!((w, h), (64, 48), "小图不应被放大");
+    }
+
+    #[test]
+    fn thumbnail_of_corrupt_file_returns_error() {
+        let d = tmpdir("thumbbad");
+        let bad = d.join("bad.png");
+        fs::write(&bad, b"not an image at all").unwrap();
+        let dst = d.join("t.png");
+        let r = make_thumbnail(&bad, &dst, 64);
+        assert!(r.is_err(), "坏文件必须报错而不是产出空图");
     }
 }

@@ -18,7 +18,9 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-tauri = { version = "2", features = [] }
+# protocol-asset：启用 asset 协议，供前端通过 convertFileSrc 加载本地缩略图。
+# 必须与 tauri.conf.json 的 app.security.assetProtocol 同时开启，否则构建期报错。
+tauri = { version = "2", features = ["protocol-asset"] }
 tauri-plugin-opener = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
@@ -29,7 +31,7 @@ image = { version = "0.25", default-features = false, features = [
     "webp",
     "bmp",
 ] }
-fast_image_resize = "6.1"
+fast_image_resize = { version = "6.1", features = ["image"] }
 kamadak-exif = "0.6"
 tauri-plugin-dialog = "2.8.4"
 

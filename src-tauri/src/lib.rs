@@ -14,7 +14,8 @@ pub fn run() {
         // 写成 commands::<模块> 会报 E0433。
         .invoke_handler(tauri::generate_handler![
             commands::app_info::app_info,
-            commands::import::probe_files
+            commands::import::probe_files,
+            commands::import::prepare_thumbnail
         ])
         .run(tauri::generate_context!())
         .expect("应用启动失败");
