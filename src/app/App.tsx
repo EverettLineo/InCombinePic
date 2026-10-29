@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { CanvasArea } from "../features/canvas/CanvasArea";
 import { LibraryPanel } from "../features/library/LibraryPanel";
-import { InspectorPanel } from "../features/inspector/InspectorPanel";
 import { BenchScreen } from "../features/scene/BenchScreen";
+import { RightPanel } from "./RightPanel";
 import {
   getAppInfo,
   isBenchRequested,
@@ -80,9 +80,7 @@ export default function App() {
           <CanvasArea />
         </ErrorBoundary>
 
-        <aside className="panel panel--right">
-          <InspectorPanel />
-        </aside>
+        <RightPanel />
       </div>
 
       {error ? (

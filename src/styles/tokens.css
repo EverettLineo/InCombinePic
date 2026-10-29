@@ -502,17 +502,16 @@ input:focus {
   flex: 1;
 }
 
-.lib-item__thumb {
-  flex: 0 0 36px;
-  width: 36px;
-  height: 36px;
-  border-radius: var(--radius-sm);
+/* 缩略图基类：资源库与图层列表共用（ui/Thumbnail） */
+.thumb {
+  flex: none;
   object-fit: cover;
+  border-radius: var(--radius-sm);
   background: var(--bg-hover);
   border: 1px solid var(--border-subtle);
 }
 
-.lib-item__thumb--loading {
+.thumb--loading {
   display: block;
   background: repeating-linear-gradient(
     45deg,
@@ -523,12 +522,18 @@ input:focus {
   );
 }
 
-.lib-item__thumb--failed {
+.thumb--failed {
   display: flex;
   align-items: center;
   justify-content: center;
   color: var(--danger);
   font-size: var(--fs-xs);
+}
+
+.lib-item__thumb {
+  flex: 0 0 36px;
+  width: 36px;
+  height: 36px;
 }
 
 .lib-item__name {
@@ -600,3 +605,221 @@ input:focus {
   color: var(--text-secondary);
 }
 
+
+/* ---------- P6 右侧面板：标签页 / 属性 / 图层 / 多选编排 ---------- */
+
+.panel__tabs {
+  display: flex;
+  gap: 2px;
+  padding: 8px 8px 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.panel__tab {
+  flex: 1;
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  padding: 5px 8px;
+  color: var(--text-secondary);
+  font-size: var(--fs-sm);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+
+.panel__tab:hover {
+  background: var(--bg-hover);
+}
+
+.panel__tab--active {
+  color: var(--text-primary);
+  font-weight: 600;
+  border-bottom-color: var(--accent);
+}
+
+.inspector {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.inspector__group-title {
+  font-size: var(--fs-xs);
+  color: var(--text-secondary);
+  font-weight: 600;
+  letter-spacing: 0.4px;
+}
+
+.inspector__row {
+  display: flex;
+  gap: 8px;
+}
+
+.inspector__row > .field {
+  flex: 1;
+  min-width: 0;
+}
+
+.inspector__hint {
+  font-size: var(--fs-xs);
+  color: var(--text-disabled);
+  line-height: 1.5;
+}
+
+.field {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.field__label {
+  flex: 0 0 16px;
+  font-size: var(--fs-xs);
+  color: var(--text-secondary);
+  text-align: right;
+}
+
+.field input {
+  width: 100%;
+  min-width: 0;
+  font-variant-numeric: tabular-nums;
+  padding: 3px 6px;
+}
+
+/* 多选编排条 */
+.align-bar {
+  padding: 8px 12px 10px;
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--bg-app);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.align-bar__title {
+  font-size: var(--fs-xs);
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.align-bar__grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+}
+
+.align-bar__grid--two {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.align-bar__grid button {
+  padding: 3px 4px;
+  font-size: var(--fs-xs);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.align-bar__grid button:disabled {
+  color: var(--text-disabled);
+  cursor: default;
+  background: transparent;
+}
+
+.align-bar__glyph {
+  font-size: var(--fs-sm);
+  line-height: 1;
+  color: var(--text-secondary);
+}
+
+.align-bar__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.align-bar__hint {
+  font-size: var(--fs-xs);
+  color: var(--text-disabled);
+}
+
+.align-bar__delete {
+  color: var(--danger);
+}
+
+/* 图层列表 */
+.layer-hint {
+  font-size: var(--fs-xs);
+  color: var(--text-disabled);
+  padding-bottom: 6px;
+}
+
+.layer-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.layer-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 6px;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  cursor: default;
+  touch-action: none;
+}
+
+.layer-item:hover {
+  background: var(--bg-hover);
+}
+
+.layer-item--active {
+  background: var(--bg-active);
+  border-color: var(--accent);
+}
+
+.layer-item--drop {
+  border-color: var(--accent);
+  border-style: dashed;
+}
+
+.layer-item__stack {
+  flex: 0 0 18px;
+  text-align: right;
+  font-size: var(--fs-xs);
+  color: var(--text-disabled);
+  font-variant-numeric: tabular-nums;
+}
+
+.layer-item__thumb {
+  width: 28px;
+  height: 28px;
+}
+
+.layer-item__main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.layer-item__name {
+  font-size: var(--fs-sm);
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.layer-item__meta {
+  font-size: var(--fs-xs);
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}

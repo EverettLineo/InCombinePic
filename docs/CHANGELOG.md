@@ -6,6 +6,35 @@
 
 ---
 
+## 2026-10-29 · P6 图层、对齐与吸附
+
+**新增**
+
+- `domain/align.ts`：`selectionBounds`、`alignInstances`（六向，基准为选中包围盒）、`distributeInstances`（边缘等距，首尾不动）、`displayIndexToArray`（图层显示序 ↔ 数组序）
+- `domain/snap.ts`：`snapMove` —— 画布与图片的边/中线吸附，返回修正位移与辅助线段
+- `features/layers/LayerPanel`：图层列表（顶层在上）、指针拖拽排序、可选中透明对象
+- `features/layers/AlignBar`：多选编排条（六向对齐 / 横纵等距 / 批量删除），选中 ≥2 时出现、≥3 才可分布
+- `app/RightPanel`：右栏「属性 / 图层」标签页；`ui/Thumbnail` 上移，资源库与图层共用
+- `apply.ts`：`syncGuides` —— 覆盖层辅助线，`strokeScaleEnabled=false`，不进导出
+- 拖动改为"起点 + 总位移"模型，`Alt` 临时关闭吸附（D-04）
+
+**修复**
+
+- D-005 右侧面板重复嵌套 `aside`（边框与内边距加倍）
+- D-006 `.field` / `.field__label` / `.inspector__row` 等类名从未写样式，属性面板排版错乱
+- D-007 点中已选对象会把多选塌缩为单选，导致"批量移动"实际不可用
+
+**验证**
+
+- 前端用例 105 → **133 项**（align 18 + snap 10）
+- typecheck / lint 0 错误 0 警告
+
+**未完成**
+
+- 图层拖拽、吸附手感的实操验证（KI-16）
+
+---
+
 ## 2026-10-29 · P5 控制点缩放
 
 **新增**

@@ -10,7 +10,7 @@ import { askUser, normalizeError } from "../../platform/ipc";
 import { useDocStore } from "../../state/docStore";
 import { useLibraryStore } from "../../state/libraryStore";
 import { placeItem } from "../canvas/placement";
-import { Thumbnail } from "./Thumbnail";
+import { Thumbnail } from "../../ui/Thumbnail";
 import { useImportController } from "./useImportController";
 
 function formatSize(bytes: number): string {
@@ -248,7 +248,7 @@ export function LibraryPanel() {
                 title="点击查看较大预览，双击放入画布，按住拖动可调整顺序"
               >
                 <span className="lib-item__index">{idx + 1}</span>
-                <Thumbnail path={it.sourcePath} alt={it.fileName} />
+                <Thumbnail path={it.sourcePath} alt={it.fileName} className="lib-item__thumb" />
                 <span className="lib-item__main">
                   <span className="lib-item__name" title={it.sourcePath}>
                     {it.fileName}

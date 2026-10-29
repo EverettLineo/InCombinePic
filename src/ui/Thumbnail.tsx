@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
-import { prepareThumbnail, toAssetUrl } from "../../platform/ipc";
+import { prepareThumbnail, toAssetUrl } from "../platform/ipc";
 
 /**
- * 缩略图加载器。
+ * 缩略图加载器（资源库与图层列表共用）。
  *
  * 为什么要限并发：生成缩略图需要先把原图完整解码。
  * 50 张 8000×6000 的图若同时解码，峰值内存会到 9 GB 量级，
@@ -56,16 +56,11 @@ interface ThumbnailProps {
   path: string;
   maxEdge?: number;
   alt?: string;
-  /** 可替换外层类名（列表用 36px 缩略图，预览用大图样式） */
+  /** 尺寸类名（如 lib-item__thumb / layer-item__thumb）；加载与失败态也会保留它 */
   className?: string;
 }
 
-export function Thumbnail({
-  path,
-  maxEdge = 96,
-  alt = "",
-  className = "lib-item__thumb",
-}: ThumbnailProps) {
+export function Thumbnail({ path, maxEdge = 96, alt = "", className }: ThumbnailProps) {
   const [url, setUrl] = useState<string | null>(
     () => cache.get(keyOf(path, maxEdge)) ?? null,
   );
@@ -86,19 +81,21 @@ export function Thumbnail({
     };
   }, [path, maxEdge, url]);
 
+  const cls = ["thumb", className].filter(Boolean).join(" ");
+
   if (failed) {
     return (
-      <span className={`${className} ${className}--failed`} title="缩略图生成失败">
+      <span className={`${cls} thumb--failed`} title="缩略图生成失败">
         ×
       </span>
     );
   }
   if (!url) {
-    return <span className={`${className} ${className}--loading`} />;
+    return <span className={`${cls} thumb--loading`} />;
   }
   return (
     <img
-      className={className}
+      className={cls}
       src={url}
       alt={alt}
       draggable={false}

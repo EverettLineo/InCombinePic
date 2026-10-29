@@ -6,6 +6,7 @@
  */
 
 import Konva from "konva";
+import type { SnapGuide } from "../../domain/snap";
 import { coverCrop, frameCenter, handlePoints } from "../../domain/transform";
 import type { Background, CanvasSpec, DocumentState, Id } from "../../domain/types";
 import type { SceneDescriptor } from "./derive";
@@ -194,4 +195,31 @@ export function syncSelection(
       );
     }
   }
+}
+
+/**
+ * 对齐辅助线（T6.6）：只在视图上画，**不进导出**（基线 §10.2）。
+ * 线宽 1px 且不随缩放变化，避免放大后辅助线变成色块。
+ */
+export function syncGuides(layer: Konva.Layer, guides: readonly SnapGuide[]): void {
+  for (const child of layer.getChildren()) {
+    if (child.id().startsWith("guide-")) child.destroy();
+  }
+  guides.forEach((g, i) => {
+    const points =
+      g.axis === "x"
+        ? [g.position, g.start, g.position, g.end]
+        : [g.start, g.position, g.end, g.position];
+    layer.add(
+      new Konva.Line({
+        id: `guide-${i}`,
+        listening: false,
+        stroke: "#e0457b",
+        strokeWidth: 1,
+        strokeScaleEnabled: false,
+        dash: [5, 4],
+        points,
+      }),
+    );
+  });
 }

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { filterAliveSelection, updateInstance } from "../../domain/document";
+import { snapMove, type SnapGuide } from "../../domain/snap";
 import type { Frame, Id } from "../../domain/types";
 import { useDocStore } from "../../state/docStore";
 import { useLibraryStore } from "../../state/libraryStore";
@@ -9,6 +10,9 @@ import { deriveScene } from "../scene/derive";
 import { placeAllItems } from "./placement";
 import { useSceneSources } from "./useSceneSources";
 import { useCanvasShortcuts } from "./useCanvasShortcuts";
+
+/** 吸附阈值（屏幕像素）：折算到画布坐标后，不同缩放下的手感一致 */
+const SNAP_SCREEN_PX = 6;
 
 /** 画布区域：视图控制条 + Konva 舞台 / 空状态 */
 export function CanvasArea() {
@@ -69,8 +73,13 @@ export function CanvasArea() {
       if (!additive) clearSelection();
       return;
     }
-    if (additive) toggleSelection(id);
-    else setSelection([id]);
+    if (additive) {
+      toggleSelection(id);
+      return;
+    }
+    // 点中已在选中集合里的对象时保持多选原样——否则多选后无法整体拖动，
+    // 批量移动会变成"一次只能拖一个"。
+    if (!useViewStore.getState().selection.includes(id)) setSelection([id]);
   }
 
   /** 百分比输入框的编辑中值；失焦/回车时才应用到视图 */
@@ -89,26 +98,55 @@ export function CanvasArea() {
     setZoom(v / 100); // 上下限由 store 统一裁剪
   }
 
-  /** 拖动增量提交：同一拖动过程共用一个 mergeKey，合并为一步撤销 */
-  function handleMoveSelected(dx: number, dy: number) {
-    const current = useViewStore.getState().selection;
-    if (current.length === 0) return;
+  const [guides, setGuides] = useState<SnapGuide[]>([]);
+  const dragBaseRef = useRef<Array<{ id: Id; frame: Frame }> | null>(null);
+
+  /** 拖动开始：记录起始外框。吸附必须基于起点计算，否则位移会随增量累积漂移 */
+  function handleDragStart() {
+    const ids = new Set(useViewStore.getState().selection);
+    const d = useDocStore.getState().doc;
+    dragBaseRef.current = d.instances
+      .filter((it) => ids.has(it.id))
+      .map((it) => ({ id: it.id, frame: it.frame }));
+  }
+
+  /** 拖动中：按"起点 + 总位移"重算位置，并按屏幕 6px 阈值吸附 */
+  function handleMoveSelected(dx: number, dy: number, snapEnabled: boolean) {
+    const base = dragBaseRef.current;
+    if (!base || base.length === 0) return;
+    if (dx === 0 && dy === 0) return;
+
+    const d = useDocStore.getState().doc;
+    const z = useViewStore.getState().zoom || 1;
+    const r = snapMove(
+      d,
+      base.map((b) => b.id),
+      base.map((b) => b.frame),
+      dx,
+      dy,
+      snapEnabled ? SNAP_SCREEN_PX / z : 0,
+    );
+    setGuides(r.guides);
+
     commit(
-      (d) => {
-        let next = d;
-        for (const id of current) {
-          const it = next.instances.find((i) => i.id === id);
-          if (!it) continue;
-          next = updateInstance(next, id, {
-            frame: { ...it.frame, x: it.frame.x + dx, y: it.frame.y + dy },
+      (cur) => {
+        let next = cur;
+        for (const b of base) {
+          next = updateInstance(next, b.id, {
+            frame: { ...b.frame, x: b.frame.x + r.dx, y: b.frame.y + r.dy },
           });
         }
         return next;
       },
-      { label: "拖动图片", mergeKey: `drag:${current.join(",")}` },
+      { label: "拖动图片", mergeKey: `drag:${base.map((b) => b.id).join(",")}` },
     );
   }
 
+  function handleEndMove() {
+    dragBaseRef.current = null;
+    setGuides([]);
+    endMerge();
+  }
   /** 控制点缩放：整段拖动共用一个 mergeKey，撤销一次即回到缩放前 */
   function handleResizeSelected(frame: Frame) {
     const current = useViewStore.getState().selection;
@@ -176,10 +214,12 @@ export function CanvasArea() {
           sources={sources}
           view={{ zoom, panX, panY, selection }}
           selection={selection}
+          guides={guides}
           onSelect={handleSelect}
+          onDragStart={handleDragStart}
           onMoveSelected={handleMoveSelected}
           onResizeSelected={handleResizeSelected}
-          onEndMove={endMerge}
+          onEndMove={handleEndMove}
           onZoomAt={zoomAt}
           onPanBy={panBy}
         />

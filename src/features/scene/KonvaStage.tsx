@@ -1,9 +1,10 @@
 import Konva from "konva";
 import { useEffect, useRef } from "react";
 import { hitTest } from "../../domain/document";
+import type { SnapGuide } from "../../domain/snap";
 import { applyResize, cursorForHandle, handlePoints } from "../../domain/transform";
 import type { DocumentState, Frame, Id, ViewState } from "../../domain/types";
-import { syncBackground, syncCanvasOutline, syncLayer, syncSelection } from "./apply";
+import { syncBackground, syncCanvasOutline, syncGuides, syncLayer, syncSelection } from "./apply";
 import { deriveScene, type SceneSources } from "./derive";
 
 interface KonvaStageProps {
@@ -11,10 +12,14 @@ interface KonvaStageProps {
   sources: SceneSources;
   view: ViewState;
   selection: readonly Id[];
+  /** 对齐辅助线（吸附结果），只在视图上画，不进导出 */
+  guides: readonly SnapGuide[];
   /** 点击命中：null 表示点到空白（additive 时不清除选择） */
   onSelect: (id: Id | null, additive: boolean) => void;
-  /** 拖动选中集合的增量（画布坐标）；调用方用 mergeKey 合并 */
-  onMoveSelected: (dx: number, dy: number) => void;
+  /** 拖动开始（此时选中集合已更新）：调用方据此记录起始外框 */
+  onDragStart: () => void;
+  /** 拖动位移（相对拖动起点的总位移）；snapEnabled=false 时按住 Alt 临时关闭吸附 */
+  onMoveSelected: (dx: number, dy: number, snapEnabled: boolean) => void;
   /** 控制点缩放后的新外框；调用方用 mergeKey 合并 */
   onResizeSelected: (frame: Frame) => void;
   /** 一次拖动/缩放结束 */
@@ -40,7 +45,9 @@ export function KonvaStage({
   sources,
   view,
   selection,
+  guides,
   onSelect,
+  onDragStart,
   onMoveSelected,
   onResizeSelected,
   onEndMove,
@@ -58,6 +65,7 @@ export function KonvaStage({
   const zoomRef = useRef(onZoomAt);
   const panRef = useRef(onPanBy);
   const selectRef = useRef(onSelect);
+  const dragStartRef = useRef(onDragStart);
   const moveRef = useRef(onMoveSelected);
   const resizeRef = useRef(onResizeSelected);
   const endMoveRef = useRef(onEndMove);
@@ -67,6 +75,7 @@ export function KonvaStage({
   zoomRef.current = onZoomAt;
   panRef.current = onPanBy;
   selectRef.current = onSelect;
+  dragStartRef.current = onDragStart;
   moveRef.current = onMoveSelected;
   resizeRef.current = onResizeSelected;
   endMoveRef.current = onEndMove;
@@ -133,7 +142,8 @@ export function KonvaStage({
     let resizing: { kind: ReturnType<typeof hitHandle>; base: Frame; start: { x: number; y: number } } | null =
       null;
     let last = { x: 0, y: 0 };
-    let lastDoc = { x: 0, y: 0 };
+    /** 拖动起点（画布坐标）：位移按"相对起点"计算，吸附才不会随增量累积漂移 */
+    let dragOrigin = { x: 0, y: 0 };
 
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.code === "Space" && !isEditable(e.target)) {
@@ -171,7 +181,9 @@ export function KonvaStage({
       selectRef.current(hit, e.ctrlKey || e.shiftKey);
       if (hit) {
         dragging = true;
-        lastDoc = p;
+        dragOrigin = p;
+        // 必须在选中集合更新之后记录起始外框，否则拖"未选中对象"时会漏掉它
+        dragStartRef.current();
         host.setPointerCapture(e.pointerId);
         host.style.cursor = "move";
       }
@@ -194,8 +206,8 @@ export function KonvaStage({
       }
 
       if (dragging) {
-        moveRef.current(p.x - lastDoc.x, p.y - lastDoc.y);
-        lastDoc = p;
+        // 按住 Alt 临时关闭吸附（D-04 / T6.7），便于精细摆放
+        moveRef.current(p.x - dragOrigin.x, p.y - dragOrigin.y, !e.altKey);
         return;
       }
 
@@ -281,11 +293,12 @@ export function KonvaStage({
     syncCanvasOutline(overlay, doc.canvas);
     // 控制点尺寸随缩放补偿，保证屏幕上恒定大小，因此依赖 view.zoom
     syncSelection(overlay, doc, selection, view.zoom);
+    syncGuides(overlay, guides);
 
     bgLayer.batchDraw();
     contentLayer.batchDraw();
     overlay.batchDraw();
-  }, [doc, sources, selection, view.zoom]);
+  }, [doc, sources, selection, view.zoom, guides]);
 
   return <div className="stage-host" ref={hostRef} />;
 }
