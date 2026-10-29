@@ -19,6 +19,9 @@
 | --- | --- | --- | --- |
 | Tauri | 2.12.5（实测） | MIT 或 Apache-2.0（双许可，择一） | 保留版权与许可文本；若按 Apache-2.0 使用需附 NOTICE |
 | WRY / TAO | 随 Tauri 锁定 | MIT 或 Apache-2.0 | 同上 |
+| `tauri-plugin-opener` | 2.7.x | MIT 或 Apache-2.0 | 同上 |
+| `tauri-plugin-dialog` | 2.8.4（实测） | MIT 或 Apache-2.0 | 同上 |
+| `rfd`（由 dialog 插件引入的本地文件对话框） | 0.17.x（实测） | MIT | 保留版权与许可文本 |
 | WebView2 Runtime | 系统提供 155.0.4283.45 | Microsoft 许可（非开源，随系统分发） | 不属于本项目分发范围 |
 
 ## 运行时依赖 —— Rust 图像管线

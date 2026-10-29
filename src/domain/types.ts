@@ -23,6 +23,8 @@ export interface LibraryItem {
   height: number;
   format: ImageFormat;
   hasAlpha: boolean;
+  /** 源文件字节数，用于列表展示与导入风险提示 */
+  fileSize: number;
 }
 
 export type ImageFormat = "png" | "jpeg" | "webp" | "bmp";

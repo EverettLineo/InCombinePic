@@ -30,6 +30,8 @@ export interface LibraryStore {
   /** 按当前模式返回排序结果（不缓存，≤50 项开销可忽略） */
   getSorted: () => LibraryItem[];
   findById: (id: Id) => LibraryItem | undefined;
+  /** 下一个导入序号：取最大值 +1，删除条目后不复用旧序号，保证顺序稳定 */
+  nextImportSeq: () => number;
 }
 
 export const useLibraryStore = create<LibraryStore>((set, get) => ({
@@ -67,4 +69,6 @@ export const useLibraryStore = create<LibraryStore>((set, get) => ({
   },
 
   findById: (id) => get().items.find((i) => i.id === id),
+
+  nextImportSeq: () => get().items.reduce((max, i) => Math.max(max, i.importSeq), -1) + 1,
 }));

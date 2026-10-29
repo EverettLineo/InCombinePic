@@ -1,9 +1,10 @@
 /**
  * IPC 唯一出口。所有 Rust 调用集中在此（docs/ARCHITECTURE.md §1 规则 3）。
- * 其他层不得直接 import @tauri-apps/api，该约束由 eslint 强制。
+ * 其他层不得直接 import @tauri-apps/*，该约束由 eslint 强制。
  */
 
 import { invoke } from "@tauri-apps/api/core";
+import { ask, open } from "@tauri-apps/plugin-dialog";
 
 /** 与 src-tauri/src/error.rs 的 ErrorCode 保持一致 */
 export type ErrorCode =
@@ -45,4 +46,66 @@ export interface AppInfo {
 
 export async function getAppInfo(): Promise<AppInfo> {
   return invoke<AppInfo>("app_info");
+}
+
+// ---------- 图片导入 ----------
+
+export interface ImageMeta {
+  width: number;
+  height: number;
+  format: "png" | "jpeg" | "webp" | "bmp";
+  hasAlpha: boolean;
+  fileSize: number;
+  exifOrientation: number;
+  /** 解码后 RGBA 估算占用（MB），用于导入风险预警 */
+  estimatedRgbaMb: number;
+  /** 是否超过单张风险阈值（判定在 Rust 侧，前端不重复定义阈值） */
+  risky: boolean;
+}
+
+export interface ProbeOutcome {
+  path: string;
+  ok: boolean;
+  meta?: ImageMeta | null;
+  error?: AppErrorPayload | null;
+}
+
+/**
+ * 打开系统文件选择器。
+ * 故意把 heic/heif 纳入可选范围：让用户能选中并得到明确提示，
+ * 而不是在文件列表里根本看不到（基线 §6.1 要求"明确提示不支持"）。
+ */
+export async function pickImageFiles(): Promise<string[]> {
+  const result = await open({
+    multiple: true,
+    directory: false,
+    title: "选择要导入的图片",
+    filters: [
+      {
+        name: "图片",
+        extensions: ["png", "jpg", "jpeg", "webp", "bmp", "heic", "heif"],
+      },
+    ],
+  });
+  if (result === null) return [];
+  return Array.isArray(result) ? result : [result];
+}
+
+/** 批量探测。Rust 侧保证单文件失败不影响其他文件 */
+export async function probeFiles(paths: string[]): Promise<ProbeOutcome[]> {
+  return invoke<ProbeOutcome[]>("probe_files", { paths });
+}
+
+/** 原生询问对话框（比 window.confirm 可靠，且与系统风格一致） */
+export async function askUser(
+  message: string,
+  okLabel: string,
+  cancelLabel: string,
+): Promise<boolean> {
+  return ask(message, {
+    title: "拼图工具",
+    kind: "warning",
+    okLabel,
+    cancelLabel,
+  });
 }

@@ -213,3 +213,132 @@ input:focus {
   background: #fff5f5;
   font-size: var(--fs-sm);
 }
+
+/* ---------- 资源库面板 ---------- */
+
+.lib-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px 8px;
+}
+
+.lib-toolbar__meta {
+  font-size: var(--fs-xs);
+  color: var(--text-secondary);
+}
+
+.panel__body--list {
+  padding: 0;
+  color: inherit;
+}
+
+.empty-hint {
+  padding: 12px;
+  color: var(--text-disabled);
+  font-size: var(--fs-sm);
+}
+
+.lib-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.lib-item {
+  display: flex;
+  gap: 8px;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--border-subtle);
+  cursor: default;
+}
+
+.lib-item:hover {
+  background: var(--bg-hover);
+}
+
+.lib-item__index {
+  flex: 0 0 20px;
+  text-align: right;
+  color: var(--text-disabled);
+  font-size: var(--fs-xs);
+  line-height: 18px;
+  font-variant-numeric: tabular-nums;
+}
+
+.lib-item__main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.lib-item__name {
+  font-size: var(--fs-sm);
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lib-item__meta {
+  font-size: var(--fs-xs);
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- 导入结果汇总 ---------- */
+
+.report {
+  margin: 0 12px 8px;
+  padding: 8px 10px;
+  border-radius: var(--radius-md);
+  background: var(--accent-soft);
+  color: var(--text-primary);
+  font-size: var(--fs-xs);
+  line-height: 1.6;
+  user-select: text;
+}
+
+.report--error {
+  background: #fff5f5;
+  border: 1px solid var(--danger);
+  color: var(--danger);
+}
+
+.report__failures {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px dashed var(--border-strong);
+}
+
+.report__failures-title {
+  color: var(--danger);
+  font-weight: 600;
+}
+
+.report__failures ul {
+  list-style: none;
+  margin: 2px 0 0;
+  padding: 0;
+}
+
+.report__failures li {
+  display: flex;
+  flex-direction: column;
+  padding: 2px 0;
+}
+
+.report__file {
+  color: var(--text-primary);
+  word-break: break-all;
+}
+
+.report__reason {
+  color: var(--danger);
+}
+
+.report__hint {
+  color: var(--text-secondary);
+}
+

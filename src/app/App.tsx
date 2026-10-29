@@ -3,7 +3,7 @@ import { getAppInfo, normalizeError, type AppInfo, type AppErrorPayload } from "
 import { useDocStore } from "../state/docStore";
 import { useLibraryStore } from "../state/libraryStore";
 import { useViewStore } from "../state/viewStore";
-import { LIBRARY_SORT_LABELS } from "../domain/library";
+import { LibraryPanel } from "../features/library/LibraryPanel";
 
 /**
  * 应用外壳。P1 阶段验证：启动、三栏骨架、IPC 往返、三域 store 接线。
@@ -15,8 +15,7 @@ export default function App() {
 
   const doc = useDocStore((s) => s.doc);
   const dirty = useDocStore((s) => s.dirty);
-  const items = useLibraryStore((s) => s.items);
-  const sortMode = useLibraryStore((s) => s.sortMode);
+  const itemCount = useLibraryStore((s) => s.items.length);
   const selection = useViewStore((s) => s.selection);
   const zoom = useViewStore((s) => s.zoom);
 
@@ -39,22 +38,12 @@ export default function App() {
       </header>
 
       <div className="body">
-        <aside className="panel panel--left">
-          <div className="panel__title">资源库</div>
-          <div className="panel__body">
-            {items.length === 0 ? (
-              <span>尚未导入图片</span>
-            ) : (
-              <span>
-                共 {items.length} 项 · 排序：{LIBRARY_SORT_LABELS[sortMode]}
-              </span>
-            )}
-          </div>
-        </aside>
+        <LibraryPanel />
 
         <main className="canvas-area">
           <div className="canvas-area__placeholder">
             画布 {doc.canvas.width} × {doc.canvas.height} · 视图 {Math.round(zoom * 100)}%
+            {itemCount > 0 && doc.instances.length === 0 ? " · 从左侧选择图片开始排版" : ""}
           </div>
         </main>
 

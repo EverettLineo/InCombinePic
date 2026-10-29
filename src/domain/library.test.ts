@@ -13,6 +13,7 @@ function item(id: string, fileName: string, importSeq: number, importedAt = 1000
     height: 100,
     format: "png",
     hasAlpha: false,
+    fileSize: 2048,
   };
 }
 

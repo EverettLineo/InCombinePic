@@ -189,9 +189,78 @@ image = { version = "0.25.10", default-features = false,
 - 17 寸以下小屏与 200% 缩放的排版
 - 日志、偏好持久化（T1.4 / T11.4 未开始）
 
+### 补充：T1.6 状态层验证（同日）
+
+| 检查项 | 结果 |
+| --- | --- |
+| 前端用例总数 | **44 通过**（geometry 14 / document 17 / library 13） |
+| TypeScript | 0 错误 |
+| ESLint | 0 错误 0 警告 |
+| 前端构建 | 225.29 kB JS（gzip 71.11 kB） |
+
+**用例覆盖的行为契约**（这些是后续功能的正确性底座，不是凑数）：
+
+| 契约 | 对应基线 |
+| --- | --- |
+| 删除实例不删资源、释放资源级联删除其全部实例 | §7.3、§6.6 |
+| 画布尺寸变更不移动/缩放既有实例 | §5.3 |
+| 90° 旋转不改变 `frame` 与 `crop` | §8.3 |
+| 裁剪被约束在源图内且不退化 | §8.4 |
+| 切换排序模式后再切回，恢复原手动顺序 | §6.5 |
+| 同名文件以导入序号做稳定次级排序 | §6.5 |
+| 新导入条目追加到自定义顺序末尾，不插入中间 | §6.5 |
+
+**发现的缺陷（已修复）**
+
+| 编号 | 现象 | 根因 | 修复 |
+| --- | --- | --- | --- |
+| D-002 | `setCrop` 在裁剪起点顶到源图边缘时产出零面积裁剪 | `clamp(w, 1, source.w - x)` 在 `x == source.w` 时上界变 0，`min > max`，`Math.min` 直接返回 0 | 上界改为 `Math.max(1, source.w - x)`，`x` 上界取 `source.w - 1`；补边界用例 |
+
 ---
 
-## TR-05 已知问题与风险
+## TR-05 导入与解码链路验证（对应 T2.1 / T2.4 / T2.5 / T2.6 / T2.11）
+
+**形态**：Rust 侧 `imaging::probe_one` / `probe_many` 已覆盖为自动化单测（`cargo test`），前端编排层由类型检查与手工路径保证。
+
+### 自动化测试结果（`cargo test`，10 项全通过）
+
+| 用例 | 验证的行为 | 结果 |
+| --- | --- | --- |
+| `png_with_alpha_is_detected` | PNG 可导入，`has_alpha` 正确，尺寸正确 | 通过 |
+| `jpeg_and_bmp_are_supported` | JPEG / BMP 可导入，格式标识正确 | 通过 |
+| `truncated_png_fails_with_decode_error_not_panic` | 截断文件判定失败并给出可解释错误码，不 panic | 通过 |
+| `heic_signature_is_rejected_with_hint` | HEIC 被拒绝，且**必须带转换建议** | 通过 |
+| `heic_renamed_to_jpg_is_still_rejected` | **HEIC 改名成 .jpg 仍被识别并拒绝**（按 ftyp brand 判定，不看扩展名） | 通过 |
+| `missing_file_reports_io_error` | 文件不存在映射为 `IO_FAILED` | 通过 |
+| `batch_isolates_failures_and_keeps_order` | 3 个文件中间 1 个失败，其余 2 个照常成功，且结果顺序与入参一致 | 通过 |
+| `orientation_swaps_axes_only_for_5_to_8` | EXIF 方向 1~8 中仅 5/6/7/8 交换宽高 | 通过 |
+| `error::heic_error_is_actionable` | HEIC 错误必须带可执行建议 | 通过 |
+| `error::io_error_maps_to_io_code` | IO 错误码映射 | 通过 |
+
+### 构建与启动
+
+| 检查项 | 结果 |
+| --- | --- |
+| TypeScript / ESLint | 0 错误 |
+| 前端用例 | 44 通过（未回退） |
+| Rust 用例 | 10 通过 |
+| release 构建 | 2 分 43 秒，产出 `pintu.exe` |
+| 启动 | 进程存活（26,704 K），对话框插件初始化无崩溃 |
+
+> 构建通过同时说明 `capabilities/default.json` 中的 `dialog:allow-open` / `dialog:allow-ask` 权限标识被 Tauri 校验接纳（非法权限会在构建期报错）。
+
+### 未测试项（不得视为通过）
+
+| 项 | 原因 | 归属 |
+| --- | --- | --- |
+| 点击"导入图片"后的完整交互 | 需要真实 GUI 点击与文件选择，当前无法自动化 | 人工验证，见 `docs/KNOWN_ISSUES.md` KI-07 |
+| 拖放导入 | 未实现 | T2.2 |
+| 剪贴板 `Ctrl+V` 导入 | 未实现 | T2.3 |
+| 50 张图片导入耗时 | 未做压力场景 | T12.3 |
+
+---
+
+## TR-06 已知问题与风险
 
 | 编号 | 问题 | 影响 | 处理 |
 | --- | --- | --- | --- |
@@ -202,6 +271,6 @@ image = { version = "0.25.10", default-features = false,
 
 ---
 
-## TR-06 尚未执行的测试（标记为未测试，不代表通过）
+## TR-07 尚未执行的测试（标记为未测试，不代表通过）
 
 基线 §16 清单中以下项当前状态为 **未测试**：环境与打包类（T0.7 WebView2 部署方式）、20,000 px 导出（T0.9）、交互与数据生命周期类（P2 之后）、导出与压力类（P10 之后）、安装/卸载（T12.7）。
