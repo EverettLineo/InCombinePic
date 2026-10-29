@@ -87,3 +87,90 @@ export function alignFrame(frame: Frame): Frame {
     h: Math.round(frame.h),
   };
 }
+
+/** 八个控制点方位 */
+export type HandleKind = "nw" | "n" | "ne" | "e" | "se" | "s" | "sw" | "w";
+
+export interface HandlePoint {
+  kind: HandleKind;
+  x: number;
+  y: number;
+}
+
+/** 控制点坐标（画布坐标）。绘制与命中判定共用，避免两处算错 */
+export function handlePoints(frame: Frame): HandlePoint[] {
+  const { x, y, w, h } = frame;
+  const cx = x + w / 2;
+  const cy = y + h / 2;
+  return [
+    { kind: "nw", x, y },
+    { kind: "n", x: cx, y },
+    { kind: "ne", x: x + w, y },
+    { kind: "e", x: x + w, y: cy },
+    { kind: "se", x: x + w, y: y + h },
+    { kind: "s", x: cx, y: y + h },
+    { kind: "sw", x, y: y + h },
+    { kind: "w", x, y: cy },
+  ];
+}
+
+/**
+ * 按控制点拖动量计算新的外框。
+ *
+ * 对边固定（拖左边则右边不动），最小尺寸受 `min` 限制，
+ * 避免拖成零面积导致 coverCrop 除零。
+ */
+export function applyResize(
+  frame: Frame,
+  kind: HandleKind,
+  dx: number,
+  dy: number,
+  min = 8,
+): Frame {
+  let { x, y, w, h } = frame;
+  const left = frame.x;
+  const top = frame.y;
+  const right = frame.x + frame.w;
+  const bottom = frame.y + frame.h;
+
+  const west = kind === "w" || kind === "nw" || kind === "sw";
+  const east = kind === "e" || kind === "ne" || kind === "se";
+  const north = kind === "n" || kind === "nw" || kind === "ne";
+  const south = kind === "s" || kind === "sw" || kind === "se";
+
+  if (east) {
+    w = Math.max(min, w + dx);
+  } else if (west) {
+    // 右边固定：新宽度 = 右边 - 新左边，且不小于最小尺寸
+    const nx = Math.min(right - min, left + dx);
+    w = right - nx;
+    x = nx;
+  }
+
+  if (south) {
+    h = Math.max(min, h + dy);
+  } else if (north) {
+    const ny = Math.min(bottom - min, top + dy);
+    h = bottom - ny;
+    y = ny;
+  }
+
+  return { x, y, w, h };
+}
+
+/** 不同控制点对应的鼠标指针样式 */
+export function cursorForHandle(kind: HandleKind): string {
+  switch (kind) {
+    case "nw":
+    case "se":
+      return "nwse-resize";
+    case "ne":
+    case "sw":
+      return "nesw-resize";
+    case "n":
+    case "s":
+      return "ns-resize";
+    default:
+      return "ew-resize";
+  }
+}

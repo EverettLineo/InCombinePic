@@ -6,9 +6,12 @@
  */
 
 import Konva from "konva";
-import { coverCrop, frameCenter } from "../../domain/transform";
+import { coverCrop, frameCenter, handlePoints } from "../../domain/transform";
 import type { Background, CanvasSpec, DocumentState, Id } from "../../domain/types";
 import type { SceneDescriptor } from "./derive";
+
+/** 控制点在屏幕上的边长（px），与视图缩放无关 */
+const HANDLE_SIZE_PX = 7;
 
 /** 棋盘格仅用于透明背景的预览提示，不是用户可选的背景类型（基线 §10.1） */
 function makeCheckerPattern(): HTMLCanvasElement {
@@ -143,27 +146,52 @@ export function syncSelection(
   layer: Konva.Layer,
   doc: DocumentState,
   selection: readonly Id[],
+  zoom = 1,
 ): void {
   for (const child of layer.getChildren()) {
-    if (child.id().startsWith("sel-")) child.destroy();
+    const id = child.id();
+    if (id.startsWith("sel-") || id.startsWith("handle-")) child.destroy();
   }
   if (selection.length === 0) return;
 
   const selected = new Set(selection);
-  for (const it of doc.instances) {
-    if (!selected.has(it.id)) continue;
-    const rect = new Konva.Rect({
-      id: `sel-${it.id}`,
-      listening: false,
-      stroke: "#2f7ce0",
-      strokeWidth: 1.5,
-      strokeScaleEnabled: false,
-      dash: [4, 3],
-      x: it.frame.x,
-      y: it.frame.y,
-      width: it.frame.w,
-      height: it.frame.h,
-    });
-    layer.add(rect);
+  const targets = doc.instances.filter((it) => selected.has(it.id));
+
+  for (const it of targets) {
+    layer.add(
+      new Konva.Rect({
+        id: `sel-${it.id}`,
+        listening: false,
+        stroke: "#2f7ce0",
+        strokeWidth: 1.5,
+        strokeScaleEnabled: false,
+        dash: [4, 3],
+        x: it.frame.x,
+        y: it.frame.y,
+        width: it.frame.w,
+        height: it.frame.h,
+      }),
+    );
+  }
+
+  // 仅在单选时显示控制点：多选的批量缩放按基线不在 v1 范围（§8.1）
+  if (targets.length === 1) {
+    const size = HANDLE_SIZE_PX / (zoom || 1);
+    for (const hp of handlePoints(targets[0].frame)) {
+      layer.add(
+        new Konva.Rect({
+          id: `handle-${hp.kind}`,
+          listening: false,
+          x: hp.x - size / 2,
+          y: hp.y - size / 2,
+          width: size,
+          height: size,
+          fill: "#ffffff",
+          stroke: "#2f7ce0",
+          strokeWidth: 1.5,
+          strokeScaleEnabled: false,
+        }),
+      );
+    }
   }
 }

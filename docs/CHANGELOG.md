@@ -6,6 +6,26 @@
 
 ---
 
+## 2026-10-29 · P5 控制点缩放
+
+**新增**
+
+- `domain/transform.ts`：`handlePoints`（八向控制点坐标）、`applyResize`（对边固定 + 最小尺寸）、`cursorForHandle`
+- `apply.ts`：单选时绘制八个控制点，尺寸按 `zoom` 反向补偿（屏幕上恒为 7px）
+- `KonvaStage`：控制点命中优先于实例命中；悬停给出缩放指针；缩放走 `mergeKey: "resize:<id>"`
+
+**关键设计**
+
+- 控制点坐标由 `handlePoints` 单点计算，绘制与命中判定共用——两处各算一遍必然出现"手柄画在这里、点击判在别处"
+- 最小尺寸 8px 兜底：拖到反向时不会出现零面积，否则 `coverCrop` 会除零
+
+**验证**
+
+- 前端用例 95 → **105 项**（transform 10 → 20）
+- typecheck / lint 0 错误 0 警告
+
+---
+
 ## 2026-10-29 · P5 画布交互（拖动/选中/属性）
 
 **新增**

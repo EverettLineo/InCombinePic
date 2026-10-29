@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { alignFrame, coverCrop, frameCenter } from "./transform";
-import type { CropRect } from "./types";
+import {
+  alignFrame,
+  applyResize,
+  coverCrop,
+  cursorForHandle,
+  frameCenter,
+  handlePoints,
+} from "./transform";
+import type { CropRect, Frame } from "./types";
 
 const fullCrop = (w: number, h: number): CropRect => ({ x: 0, y: 0, w, h });
 
@@ -83,5 +90,86 @@ describe("alignFrame", () => {
       w: 11,
       h: 20,
     });
+  });
+});
+
+describe("handlePoints", () => {
+  const frame: Frame = { x: 100, y: 50, w: 200, h: 100 };
+
+  it("返回八个控制点且方位齐全", () => {
+    const pts = handlePoints(frame);
+    expect(pts).toHaveLength(8);
+    expect(pts.map((p) => p.kind).sort()).toEqual(
+      ["e", "n", "ne", "nw", "s", "se", "sw", "w"].sort(),
+    );
+  });
+
+  it("角点落在矩形四角，边点落在边中点", () => {
+    const pts = handlePoints(frame);
+    const byKind = Object.fromEntries(pts.map((p) => [p.kind, p]));
+    expect(byKind.nw).toMatchObject({ x: 100, y: 50 });
+    expect(byKind.se).toMatchObject({ x: 300, y: 150 });
+    expect(byKind.n).toMatchObject({ x: 200, y: 50 });
+    expect(byKind.e).toMatchObject({ x: 300, y: 100 });
+  });
+});
+
+describe("applyResize", () => {
+  const frame: Frame = { x: 100, y: 100, w: 200, h: 100 };
+
+  it("拖右边只改宽度，左边固定", () => {
+    const r = applyResize(frame, "e", 50, 40);
+    expect(r).toEqual({ x: 100, y: 100, w: 250, h: 100 });
+  });
+
+  it("拖左边改 x 且右边固定", () => {
+    const r = applyResize(frame, "w", -50, 0);
+    expect(r.x).toBe(50);
+    expect(r.w).toBe(250);
+    expect(r.x + r.w).toBe(300); // 右边不动
+  });
+
+  it("拖上边改 y 且下边固定", () => {
+    const r = applyResize(frame, "n", 0, -30);
+    expect(r.y).toBe(70);
+    expect(r.h).toBe(130);
+    expect(r.y + r.h).toBe(200);
+  });
+
+  it("拖右下角同时改宽高，左上角固定", () => {
+    const r = applyResize(frame, "se", 20, 20);
+    expect(r).toEqual({ x: 100, y: 100, w: 220, h: 120 });
+  });
+
+  it("拖左上角同时改 x/y 且右下角固定", () => {
+    const r = applyResize(frame, "nw", -20, -10);
+    expect(r.x).toBe(80);
+    expect(r.y).toBe(90);
+    expect(r.x + r.w).toBe(300);
+    expect(r.y + r.h).toBe(200);
+  });
+
+  it("最小尺寸限制生效，不会被拖成零或负数", () => {
+    const r = applyResize(frame, "e", -500, 0, 8);
+    expect(r.w).toBe(8);
+    const rw = applyResize(frame, "w", 500, 0, 8);
+    expect(rw.w).toBe(8);
+  });
+
+  it("边中点只影响单一维度", () => {
+    const r = applyResize(frame, "n", 40, -20);
+    expect(r.x).toBe(100);
+    expect(r.w).toBe(200);
+    expect(r.h).toBe(120);
+  });
+});
+
+describe("cursorForHandle", () => {
+  it("角点与边点给出正确的缩放指针", () => {
+    expect(cursorForHandle("nw")).toBe("nwse-resize");
+    expect(cursorForHandle("se")).toBe("nwse-resize");
+    expect(cursorForHandle("ne")).toBe("nesw-resize");
+    expect(cursorForHandle("n")).toBe("ns-resize");
+    expect(cursorForHandle("e")).toBe("ew-resize");
   });
 });

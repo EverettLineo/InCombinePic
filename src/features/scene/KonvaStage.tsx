@@ -1,7 +1,8 @@
 import Konva from "konva";
 import { useEffect, useRef } from "react";
 import { hitTest } from "../../domain/document";
-import type { DocumentState, Id, ViewState } from "../../domain/types";
+import { applyResize, cursorForHandle, handlePoints } from "../../domain/transform";
+import type { DocumentState, Frame, Id, ViewState } from "../../domain/types";
 import { syncBackground, syncCanvasOutline, syncLayer, syncSelection } from "./apply";
 import { deriveScene, type SceneSources } from "./derive";
 
@@ -9,25 +10,30 @@ interface KonvaStageProps {
   doc: DocumentState;
   sources: SceneSources;
   view: ViewState;
+  selection: readonly Id[];
   /** 点击命中：null 表示点到空白（additive 时不清除选择） */
   onSelect: (id: Id | null, additive: boolean) => void;
-  /** 拖动选中集合的增量（画布坐标）；每帧调用，调用方用 mergeKey 合并 */
+  /** 拖动选中集合的增量（画布坐标）；调用方用 mergeKey 合并 */
   onMoveSelected: (dx: number, dy: number) => void;
-  /** 拖动结束（pointerup） */
+  /** 控制点缩放后的新外框；调用方用 mergeKey 合并 */
+  onResizeSelected: (frame: Frame) => void;
+  /** 一次拖动/缩放结束 */
   onEndMove: () => void;
-  /** 以视口内某点为锚缩放（滚轮） */
   onZoomAt: (factor: number, anchorX: number, anchorY: number) => void;
   onPanBy: (dx: number, dy: number) => void;
 }
+
+/** 控制点在屏幕上的边长（px），与缩放无关 */
+const HANDLE_SCREEN_SIZE = 7;
 
 /**
  * 画布视图。只有本文件（及同目录 apply.ts）可以接触 Konva。
  *
  * 交互：
  * - 左键点击：命中选择（Ctrl/Shift 追加，点空白清除）
- * - 左键按住拖动：移动选中实例（增量提交，由调用方合并为一步撤销）
- * - 滚轮：以指针为锚缩放（不改变导出尺寸，基线 §5.3）
- * - 按住 Space + 拖动：平移视图
+ * - 左键拖动：移动选中实例（增量提交，合并为一步撤销）
+ * - 拖动选中框的八个控制点：缩放（对边固定）
+ * - 滚轮：以指针为锚缩放；Space + 拖动：平移视图
  */
 export function KonvaStage({
   doc,
@@ -36,34 +42,38 @@ export function KonvaStage({
   selection,
   onSelect,
   onMoveSelected,
+  onResizeSelected,
   onEndMove,
   onZoomAt,
   onPanBy,
-}: KonvaStageProps & { selection: readonly Id[] }) {
+}: KonvaStageProps) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const stageRef = useRef<Konva.Stage | null>(null);
   const bgLayerRef = useRef<Konva.Layer | null>(null);
   const contentLayerRef = useRef<Konva.Layer | null>(null);
   const overlayRef = useRef<Konva.Layer | null>(null);
 
-  // 交互回调与最新状态放 ref：事件处理器在挂载时绑定一次，
-  // 闭包若捕获旧值会出现"拖第一下正常、第二下跳回旧位置"这类难查问题
+  // 交互回调与最新状态放 ref：事件处理器只在挂载时绑定一次，
+  // 闭包捕获旧值会导致"第二次拖动跳回旧位置"这类难查问题
   const zoomRef = useRef(onZoomAt);
   const panRef = useRef(onPanBy);
   const selectRef = useRef(onSelect);
   const moveRef = useRef(onMoveSelected);
+  const resizeRef = useRef(onResizeSelected);
   const endMoveRef = useRef(onEndMove);
   const docRef = useRef(doc);
   const viewRef = useRef(view);
+  const selectionRef = useRef(selection);
   zoomRef.current = onZoomAt;
   panRef.current = onPanBy;
   selectRef.current = onSelect;
   moveRef.current = onMoveSelected;
+  resizeRef.current = onResizeSelected;
   endMoveRef.current = onEndMove;
   docRef.current = doc;
   viewRef.current = view;
+  selectionRef.current = selection;
 
-  // 初始化舞台（只做一次）
   useEffect(() => {
     const host = hostRef.current;
     if (!host) return;
@@ -86,7 +96,6 @@ export function KonvaStage({
     contentLayerRef.current = contentLayer;
     overlayRef.current = overlay;
 
-    /** 屏幕坐标 → 画布（文档）坐标 */
     const toDocPoint = (clientX: number, clientY: number) => {
       const rect = host.getBoundingClientRect();
       const { zoom, panX, panY } = viewRef.current;
@@ -96,7 +105,20 @@ export function KonvaStage({
       };
     };
 
-    // ---------- 滚轮缩放 ----------
+    /** 单选中实例的控制点命中（容差按屏幕像素折算到画布坐标） */
+    const hitHandle = (p: { x: number; y: number }) => {
+      const sel = selectionRef.current;
+      if (sel.length !== 1) return null;
+      const inst = docRef.current.instances.find((i) => i.id === sel[0]);
+      if (!inst) return null;
+
+      const tol = (HANDLE_SCREEN_SIZE / 2 + 2) / viewRef.current.zoom;
+      for (const hp of handlePoints(inst.frame)) {
+        if (Math.abs(p.x - hp.x) <= tol && Math.abs(p.y - hp.y) <= tol) return hp.kind;
+      }
+      return null;
+    };
+
     stage.on("wheel", (e) => {
       e.evt.preventDefault();
       const pointer = stage.getPointerPosition();
@@ -105,10 +127,13 @@ export function KonvaStage({
       zoomRef.current(factor, pointer.x, pointer.y);
     });
 
-    // ---------- Space 平移 ----------
     let spaceDown = false;
     let panning = false;
+    let dragging = false;
+    let resizing: { kind: ReturnType<typeof hitHandle>; base: Frame; start: { x: number; y: number } } | null =
+      null;
     let last = { x: 0, y: 0 };
+    let lastDoc = { x: 0, y: 0 };
 
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.code === "Space" && !isEditable(e.target)) {
@@ -125,15 +150,24 @@ export function KonvaStage({
       }
     };
 
-    // ---------- 选择与拖动 ----------
-    let dragging = false;
-    let lastDoc = { x: 0, y: 0 };
-
     const onPointerDown = (e: PointerEvent) => {
       if (e.button !== 0 || spaceDown) return;
       const p = toDocPoint(e.clientX, e.clientY);
-      const hit = hitTest(docRef.current, p.x, p.y);
 
+      // 控制点优先于命中：否则点在手柄上会变成"选中/拖动"
+      const kind = hitHandle(p);
+      if (kind) {
+        const sel = selectionRef.current;
+        const inst = docRef.current.instances.find((i) => i.id === sel[0]);
+        if (inst) {
+          resizing = { kind, base: inst.frame, start: p };
+          host.setPointerCapture(e.pointerId);
+          host.style.cursor = cursorForHandle(kind);
+          return;
+        }
+      }
+
+      const hit = hitTest(docRef.current, p.x, p.y);
       selectRef.current(hit, e.ctrlKey || e.shiftKey);
       if (hit) {
         dragging = true;
@@ -142,23 +176,46 @@ export function KonvaStage({
         host.style.cursor = "move";
       }
     };
+
     const onPointerMove = (e: PointerEvent) => {
       if (spaceDown && panning) {
         panRef.current(e.clientX - last.x, e.clientY - last.y);
         last = { x: e.clientX, y: e.clientY };
         return;
       }
-      if (!dragging) return;
+
       const p = toDocPoint(e.clientX, e.clientY);
-      moveRef.current(p.x - lastDoc.x, p.y - lastDoc.y);
-      lastDoc = p;
-    };
-    const onPointerUp = (e: PointerEvent) => {
+
+      if (resizing && resizing.kind) {
+        resizeRef.current(
+          applyResize(resizing.base, resizing.kind, p.x - resizing.start.x, p.y - resizing.start.y),
+        );
+        return;
+      }
+
       if (dragging) {
-        dragging = false;
-        host.releasePointerCapture(e.pointerId);
+        moveRef.current(p.x - lastDoc.x, p.y - lastDoc.y);
+        lastDoc = p;
+        return;
+      }
+
+      // 悬停在控制点上时给出缩放指针，帮助用户发现"可以拖"
+      const kind = hitHandle(p);
+      host.style.cursor = kind ? cursorForHandle(kind) : "default";
+    };
+
+    const onPointerUp = (e: PointerEvent) => {
+      if (resizing) {
+        resizing = null;
         host.style.cursor = "default";
         endMoveRef.current();
+        host.releasePointerCapture(e.pointerId);
+      }
+      if (dragging) {
+        dragging = false;
+        host.style.cursor = "default";
+        endMoveRef.current();
+        host.releasePointerCapture(e.pointerId);
       }
       if (panning) {
         panning = false;
@@ -166,6 +223,7 @@ export function KonvaStage({
         host.releasePointerCapture(e.pointerId);
       }
     };
+
     const onPointerDownPan = (e: PointerEvent) => {
       if (!spaceDown || e.button !== 0) return;
       panning = true;
@@ -200,7 +258,6 @@ export function KonvaStage({
     };
   }, []);
 
-  // 视图变化：缩放与平移只作用于舞台
   useEffect(() => {
     const stage = stageRef.current;
     if (!stage) return;
@@ -209,7 +266,6 @@ export function KonvaStage({
     stage.batchDraw();
   }, [view.zoom, view.panX, view.panY]);
 
-  // 文档 / 图像源 / 选中变化：重建投影
   useEffect(() => {
     const stage = stageRef.current;
     const bgLayer = bgLayerRef.current;
@@ -223,12 +279,13 @@ export function KonvaStage({
     contentLayer.clip({ x: 0, y: 0, width: doc.canvas.width, height: doc.canvas.height });
     syncLayer(contentLayer, scene);
     syncCanvasOutline(overlay, doc.canvas);
-    syncSelection(overlay, doc, selection);
+    // 控制点尺寸随缩放补偿，保证屏幕上恒定大小，因此依赖 view.zoom
+    syncSelection(overlay, doc, selection, view.zoom);
 
     bgLayer.batchDraw();
     contentLayer.batchDraw();
     overlay.batchDraw();
-  }, [doc, sources, selection]);
+  }, [doc, sources, selection, view.zoom]);
 
   return <div className="stage-host" ref={hostRef} />;
 }

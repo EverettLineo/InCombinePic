@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { filterAliveSelection, updateInstance } from "../../domain/document";
-import type { Id } from "../../domain/types";
+import type { Frame, Id } from "../../domain/types";
 import { useDocStore } from "../../state/docStore";
 import { useLibraryStore } from "../../state/libraryStore";
 import { useViewStore } from "../../state/viewStore";
@@ -109,6 +109,17 @@ export function CanvasArea() {
     );
   }
 
+  /** 控制点缩放：整段拖动共用一个 mergeKey，撤销一次即回到缩放前 */
+  function handleResizeSelected(frame: Frame) {
+    const current = useViewStore.getState().selection;
+    if (current.length !== 1) return;
+    const id = current[0];
+    commit((d) => updateInstance(d, id, { frame }), {
+      label: "调整尺寸",
+      mergeKey: `resize:${id}`,
+    });
+  }
+
   const hasInstances = doc.instances.length > 0;
 
   return (
@@ -167,6 +178,7 @@ export function CanvasArea() {
           selection={selection}
           onSelect={handleSelect}
           onMoveSelected={handleMoveSelected}
+          onResizeSelected={handleResizeSelected}
           onEndMove={endMerge}
           onZoomAt={zoomAt}
           onPanBy={panBy}
