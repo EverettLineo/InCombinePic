@@ -7,6 +7,7 @@
 
 import { addInstance, createInstance, makeInstanceId } from "../../domain/document";
 import { centerFitFrame, gridFrames } from "../../domain/layout";
+import { emptyCellIndices, findTemplate, placeIntoCell } from "../../domain/templates";
 import type { LibraryItem } from "../../domain/types";
 import { useDocStore } from "../../state/docStore";
 import { useLibraryStore } from "../../state/libraryStore";
@@ -18,6 +19,23 @@ export function placeItem(item: LibraryItem): string | null {
   let createdId: string | null = null;
 
   commit((doc) => {
+    // 模板模式下优先填第一个空格：用户的意图是"补满模板"，而不是"盖在中间"
+    const template = findTemplate(doc.templateId);
+    if (template) {
+      const empties = emptyCellIndices(doc, template);
+      if (empties.length > 0) {
+        const next = placeIntoCell(
+          doc,
+          template,
+          empties[0],
+          { itemId: item.id, width: item.width, height: item.height },
+          makeInstanceId(empties[0]),
+        );
+        createdId = next.instances[next.instances.length - 1].id;
+        return next;
+      }
+    }
+
     const frame = centerFitFrame(
       { width: item.width, height: item.height },
       { width: doc.canvas.width, height: doc.canvas.height },

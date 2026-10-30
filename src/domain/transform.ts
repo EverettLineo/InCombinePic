@@ -70,6 +70,29 @@ export function coverCrop(
 }
 
 /**
+ * "完整显示"适配（T8.7）：不裁切，等比缩放到框内，框内剩余部分露出画布背景。
+ *
+ * 与 coverCrop 的差别只在缩放比取 `min` 而不是 `max`，且完全不改 crop。
+ */
+export function containCrop(
+  crop: CropRect,
+  rotation: Rotation,
+  frame: Pick<Frame, "w" | "h">,
+): CoverCropResult {
+  const eff = rotateSize(crop.w, crop.h, rotation);
+  if (eff.w <= 0 || eff.h <= 0 || frame.w <= 0 || frame.h <= 0) {
+    return { crop: { ...crop }, drawW: 0, drawH: 0, scale: 0 };
+  }
+  const scale = Math.min(frame.w / eff.w, frame.h / eff.h);
+  return {
+    crop: { ...crop },
+    drawW: crop.w * scale,
+    drawH: crop.h * scale,
+    scale,
+  };
+}
+
+/**
  * 把"源图像素"裁剪映射为"已加载位图"的坐标。
  *
  * 显示用的是降采样预览图（最长边 2048），而 crop 存的是源图像素。

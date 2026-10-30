@@ -7,8 +7,8 @@
 
 import Konva from "konva";
 import type { SnapGuide } from "../../domain/snap";
-import { coverCrop, frameCenter, handlePoints, toImageCrop } from "../../domain/transform";
-import type { Background, CanvasSpec, DocumentState, Id } from "../../domain/types";
+import { containCrop, coverCrop, frameCenter, handlePoints, toImageCrop } from "../../domain/transform";
+import type { Background, CanvasSpec, DocumentState, Frame, Id } from "../../domain/types";
 import type { SceneDescriptor } from "./derive";
 
 /** 控制点在屏幕上的边长（px），与视图缩放无关 */
@@ -96,7 +96,10 @@ export function syncLayer(layer: Konva.Layer, scene: SceneDescriptor): void {
     if (!n.source) return;
     alive.add(n.id);
 
-    const r = coverCrop(n.crop, n.rotation, n.frame);
+    const r =
+      n.fitMode === "contain"
+        ? containCrop(n.crop, n.rotation, n.frame)
+        : coverCrop(n.crop, n.rotation, n.frame);
     if (r.scale <= 0) return;
     const { cx, cy } = frameCenter(n.frame);
 
@@ -290,6 +293,33 @@ export function syncGuides(layer: Konva.Layer, guides: readonly SnapGuide[]): vo
         strokeScaleEnabled: false,
         dash: [5, 4],
         points,
+      }),
+    );
+  });
+}
+
+/**
+ * 空白单元格占位（T8.4 / T8.5）：虚线框 + 淡底，告诉用户"这里可以放图"。
+ * 画在背景层，图片覆盖其上；不进导出。
+ */
+export function syncEmptyCells(layer: Konva.Layer, cells: readonly Frame[]): void {
+  for (const child of layer.getChildren()) {
+    if (child.id().startsWith("cell-")) child.destroy();
+  }
+  cells.forEach((f, i) => {
+    layer.add(
+      new Konva.Rect({
+        id: `cell-${i}`,
+        listening: false,
+        x: f.x,
+        y: f.y,
+        width: f.w,
+        height: f.h,
+        fill: "#eef2f8",
+        stroke: "#b9c3d1",
+        strokeWidth: 1,
+        strokeScaleEnabled: false,
+        dash: [6, 6],
       }),
     );
   });

@@ -16,6 +16,7 @@ export function InspectorPanel() {
   const doc = useDocStore((s) => s.doc);
   const selection = useViewStore((s) => s.selection);
   const openCropEditor = useViewStore((s) => s.openCropEditor);
+  const openReplacePicker = useViewStore((s) => s.openReplacePicker);
   const commit = useDocStore((s) => s.commit);
   const endMerge = useDocStore((s) => s.endMerge);
   const findItem = useLibraryStore((s) => s.findById);
@@ -94,6 +95,15 @@ export function InspectorPanel() {
         </button>
         <button className="btn-quiet" onClick={resetCrop} title="把裁剪恢复为整张源图">
           还原全图
+        </button>
+      </div>
+      <div className="inspector__row">
+        <button
+          className="btn-quiet"
+          onClick={() => openReplacePicker(inst.id)}
+          title="用资源库里的另一张图替换（位置与外观保留，裁剪重置）"
+        >
+          替换图片…
         </button>
       </div>
       <div className="inspector__hint">裁剪只记录源图区域，不改动原文件</div>

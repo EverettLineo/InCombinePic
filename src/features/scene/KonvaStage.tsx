@@ -4,7 +4,14 @@ import { hitTest } from "../../domain/document";
 import type { SnapGuide } from "../../domain/snap";
 import { applyResize, cursorForHandle, handlePoints } from "../../domain/transform";
 import type { DocumentState, Frame, Id, ViewState } from "../../domain/types";
-import { syncBackground, syncCanvasOutline, syncGuides, syncLayer, syncSelection } from "./apply";
+import {
+  syncBackground,
+  syncCanvasOutline,
+  syncEmptyCells,
+  syncGuides,
+  syncLayer,
+  syncSelection,
+} from "./apply";
 import { deriveScene, type SceneSources } from "./derive";
 
 interface KonvaStageProps {
@@ -24,6 +31,8 @@ interface KonvaStageProps {
   onResizeSelected: (frame: Frame) => void;
   /** 一次拖动/缩放结束 */
   onEndMove: () => void;
+  /** 点击空白单元格（模板模式）：传入模板内单元格下标 */
+  onEmptyCellClick: (cellIndex: number) => void;
   onZoomAt: (factor: number, anchorX: number, anchorY: number) => void;
   onPanBy: (dx: number, dy: number) => void;
 }
@@ -51,6 +60,7 @@ export function KonvaStage({
   onMoveSelected,
   onResizeSelected,
   onEndMove,
+  onEmptyCellClick,
   onZoomAt,
   onPanBy,
 }: KonvaStageProps) {
@@ -69,6 +79,8 @@ export function KonvaStage({
   const moveRef = useRef(onMoveSelected);
   const resizeRef = useRef(onResizeSelected);
   const endMoveRef = useRef(onEndMove);
+  const emptyCellRef = useRef(onEmptyCellClick);
+  const emptyCellsRef = useRef(sceneCells(doc, sources));
   const docRef = useRef(doc);
   const viewRef = useRef(view);
   const selectionRef = useRef(selection);
@@ -79,6 +91,8 @@ export function KonvaStage({
   moveRef.current = onMoveSelected;
   resizeRef.current = onResizeSelected;
   endMoveRef.current = onEndMove;
+  emptyCellRef.current = onEmptyCellClick;
+  emptyCellsRef.current = sceneCells(doc, sources);
   docRef.current = doc;
   viewRef.current = view;
   selectionRef.current = selection;
@@ -178,6 +192,21 @@ export function KonvaStage({
       }
 
       const hit = hitTest(docRef.current, p.x, p.y);
+      if (!hit) {
+        // 模板模式下点到空白格：进入填空流程，而不是仅仅清空选择
+        const cell = emptyCellsRef.current.find(
+          (c) =>
+            p.x >= c.frame.x &&
+            p.x <= c.frame.x + c.frame.w &&
+            p.y >= c.frame.y &&
+            p.y <= c.frame.y + c.frame.h,
+        );
+        if (cell) {
+          selectRef.current(null, false);
+          emptyCellRef.current(cell.index);
+          return;
+        }
+      }
       selectRef.current(hit, e.ctrlKey || e.shiftKey);
       if (hit) {
         dragging = true;
@@ -288,6 +317,10 @@ export function KonvaStage({
     const scene = deriveScene(doc, sources);
 
     syncBackground(bgLayer, doc.canvas);
+    syncEmptyCells(
+      bgLayer,
+      scene.emptyCells.map((c) => c.frame),
+    );
     contentLayer.clip({ x: 0, y: 0, width: doc.canvas.width, height: doc.canvas.height });
     syncLayer(contentLayer, scene);
     syncCanvasOutline(overlay, doc.canvas);
@@ -301,6 +334,11 @@ export function KonvaStage({
   }, [doc, sources, selection, view.zoom, guides]);
 
   return <div className="stage-host" ref={hostRef} />;
+}
+
+/** 只取空白单元格（供事件处理读取最新值，避免闭包旧值） */
+function sceneCells(doc: DocumentState, sources: SceneSources) {
+  return deriveScene(doc, sources).emptyCells;
 }
 
 function isEditable(target: EventTarget | null): boolean {

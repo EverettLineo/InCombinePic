@@ -12,11 +12,21 @@ export const MAX_ZOOM = 8;
  * 视图状态**不进入撤销历史、不持久化、不影响导出像素尺寸**。
  * 因此本 store 与 docStore 完全隔离，任何"选中变化"都不应产生撤销记录。
  */
+/** 选图弹窗的两个用途：填入模板空格 / 替换已有实例的图片 */
+export type PickerTarget =
+  | { kind: "cell"; cellIndex: number }
+  | { kind: "replace"; instanceId: Id };
+
 export interface ViewStore extends ViewState {
   /** 正在裁剪的实例 id；null 表示未进入裁剪。属于界面状态，不入历史、不持久化 */
   cropEditor: Id | null;
   openCropEditor: (id: Id) => void;
   closeCropEditor: () => void;
+  /** 选图弹窗的目标；null 表示未打开。纯界面状态 */
+  picker: PickerTarget | null;
+  openCellPicker: (cellIndex: number) => void;
+  openReplacePicker: (instanceId: Id) => void;
+  closePicker: () => void;
   setZoom: (zoom: number) => void;
   /** 以视口内某点为锚缩放（滚轮缩放用，锚点下的内容保持不动） */
   zoomAt: (factor: number, anchorX: number, anchorY: number) => void;
@@ -36,9 +46,13 @@ const initial: ViewState = { zoom: 1, panX: 0, panY: 0, selection: [] };
 export const useViewStore = create<ViewStore>((set, get) => ({
   ...initial,
   cropEditor: null,
+  picker: null,
 
   openCropEditor: (id) => set({ cropEditor: id }),
   closeCropEditor: () => set({ cropEditor: null }),
+  openCellPicker: (cellIndex) => set({ picker: { kind: "cell", cellIndex } }),
+  openReplacePicker: (instanceId) => set({ picker: { kind: "replace", instanceId } }),
+  closePicker: () => set({ picker: null }),
 
   setZoom: (zoom) => set({ zoom: clamp(zoom, MIN_ZOOM, MAX_ZOOM) }),
 

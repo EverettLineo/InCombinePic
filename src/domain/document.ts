@@ -40,13 +40,15 @@ export interface CreateInstanceInput {
   sourceWidth: number;
   sourceHeight: number;
   frame: Frame;
+  /** 显式指定创建序号：批量创建时逐次取 `nextCreatedSeq` 会重复，模板填充因此需要传入 */
+  seq?: number;
 }
 
 export function createInstance(doc: DocumentState, input: CreateInstanceInput): CanvasInstance {
   return {
     id: input.id,
     libraryItemId: input.libraryItemId,
-    createdSeq: nextCreatedSeq(doc),
+    createdSeq: input.seq ?? nextCreatedSeq(doc),
     frame: { ...input.frame },
     crop: fullCrop(input.sourceWidth, input.sourceHeight),
     rotation: 0,

@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { CanvasArea } from "../features/canvas/CanvasArea";
 import { CropEditor } from "../features/crop/CropEditor";
-import { LibraryPanel } from "../features/library/LibraryPanel";
+import { ImagePicker } from "../features/templates/ImagePicker";
 import { BenchScreen } from "../features/scene/BenchScreen";
+import { LeftPanel } from "./LeftPanel";
 import { RightPanel } from "./RightPanel";
 import {
   getAppInfo,
@@ -75,7 +76,7 @@ export default function App() {
       </header>
 
       <div className="body">
-        <LibraryPanel />
+        <LeftPanel />
 
         <ErrorBoundary areaName="画布">
           <CanvasArea />
@@ -85,6 +86,7 @@ export default function App() {
       </div>
 
       <CropEditor />
+      <ImagePicker />
 
       {error ? (
         <div className="error-box">

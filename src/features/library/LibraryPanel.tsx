@@ -142,9 +142,7 @@ export function LibraryPanel() {
   }
 
   return (
-    <aside className="panel panel--left">
-      <div className="panel__title">资源库</div>
-
+    <>
       <div className="lib-toolbar">
         <button onClick={runPicker} disabled={busy}>
           {busy ? "正在导入…" : "导入图片"}
@@ -298,6 +296,6 @@ export function LibraryPanel() {
           </div>
         </div>
       ) : null}
-    </aside>
+    </>
   );
 }

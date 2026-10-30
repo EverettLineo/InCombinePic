@@ -9,7 +9,7 @@ import {
   type NormRect,
 } from "../../domain/crop";
 import { fullCrop, setCrop } from "../../domain/document";
-import { coverCrop, cursorForHandle } from "../../domain/transform";
+import { containCrop, coverCrop, cursorForHandle } from "../../domain/transform";
 import type { CropRect } from "../../domain/types";
 import { prepareThumbnail, toAssetUrl } from "../../platform/ipc";
 import { useDocStore } from "../../state/docStore";
@@ -58,8 +58,13 @@ function CropSession({ instanceId }: { instanceId: string }) {
 
   const source = { w: item?.width ?? 1, h: item?.height ?? 1 };
   /** 进入时的可见区域 = 当前裁剪被填满格子后的实际范围，界面从这里起步 */
-  const initialVisible: CropRect =
-    inst && item ? coverCrop(inst.crop, inst.rotation, inst.frame).crop : fullCrop(1, 1);
+  // 起点跟随当前适配模式：完整显示时可见区域就是整个 crop，不是 cover 后的中间块
+  const fit = inst
+    ? doc.fitMode === "contain"
+      ? containCrop(inst.crop, inst.rotation, inst.frame)
+      : coverCrop(inst.crop, inst.rotation, inst.frame)
+    : null;
+  const initialVisible: CropRect = fit ? fit.crop : fullCrop(1, 1);
 
   const [rect, setRect] = useState<NormRect>(() => initialCropNorm(initialVisible, source));
   const [dirty, setDirty] = useState(false);

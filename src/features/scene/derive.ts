@@ -6,7 +6,8 @@
  * 便于单测，也便于将来换渲染引擎时只改适配层。
  */
 
-import type { CanvasSpec, DocumentState, Id } from "../../domain/types";
+import { emptyCellIndices, findTemplate, templateFrames } from "../../domain/templates";
+import type { CanvasSpec, DocumentState, FitMode, Frame, Id } from "../../domain/types";
 
 /** 已加载到内存的图像源（HTMLImageElement 等，由调用方提供） */
 export interface SceneImage {
@@ -31,6 +32,8 @@ export interface SceneNode {
   opacity: number;
   border: { width: number; color: string };
   cornerRadius: number;
+  /** 全局适配模式：fill 裁切填满，contain 完整显示（T8.7） */
+  fitMode: FitMode;
   /** 图像尚未加载完成时为 undefined，渲染层应跳过该节点而不是画错位置 */
   source?: SceneImage;
 }
@@ -41,6 +44,8 @@ export interface SceneDescriptor {
   nodes: SceneNode[];
   /** 有多少实例因为图像未就绪而暂不渲染 */
   pendingCount: number;
+  /** 当前模板的空白单元格（含模板内下标）：用于占位绘制与点击填空（T8.4/T8.5） */
+  emptyCells: Array<{ index: number; frame: Frame }>;
 }
 
 export function deriveScene(doc: DocumentState, sources: SceneSources): SceneDescriptor {
@@ -59,9 +64,18 @@ export function deriveScene(doc: DocumentState, sources: SceneSources): SceneDes
       opacity: it.opacity,
       border: it.border,
       cornerRadius: it.cornerRadius,
+      fitMode: doc.fitMode,
       source,
     };
   });
 
-  return { canvas: doc.canvas, nodes, pendingCount };
+  const template = findTemplate(doc.templateId);
+  const emptyCells = template
+    ? (() => {
+        const frames = templateFrames(template, doc.canvas, doc.gap);
+        return emptyCellIndices(doc, template).map((i) => ({ index: i, frame: frames[i] }));
+      })()
+    : [];
+
+  return { canvas: doc.canvas, nodes, pendingCount, emptyCells };
 }

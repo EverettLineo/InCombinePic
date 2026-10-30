@@ -227,3 +227,60 @@ describe("图像属性进撤销栈（T7.7）", () => {
     expect(useDocStore.getState().doc.instances[0].opacity).toBe(1);
   });
 });
+
+describe("模板切换的原子性与可逆性（T8.9）", () => {
+  it("一次切换 = 一步撤销；撤销完整恢复模板与实例属性；重做恢复切换后状态", async () => {
+    const { applyTemplate, fillSourcesOf, findTemplate } = await import("../domain/templates");
+    const t = findTemplate("grid-2x2")!;
+
+    // 初始：两个实例，带裁剪/旋转/翻转/边框，位置各异
+    const a: CanvasInstance = {
+      ...inst("a"),
+      libraryItemId: "item-a",
+      createdSeq: 0,
+      crop: { x: 7, y: 8, w: 90, h: 60 },
+      rotation: 90,
+      flipH: true,
+      border: { width: 4, color: "#abcdef" },
+      cornerRadius: 6,
+    };
+    const b: CanvasInstance = { ...inst("b"), libraryItemId: "item-b", createdSeq: 1 };
+
+    const { commit, doc: initial } = useDocStore.getState();
+    commit((d) => ({ ...d, instances: [a, b] }), { label: "初始化" });
+
+    const before = useDocStore.getState().doc;
+    const beforeSnapshot = JSON.parse(JSON.stringify(before));
+
+    const sources = fillSourcesOf([
+      { id: "item-a", width: 400, height: 300 },
+      { id: "item-b", width: 400, height: 300 },
+    ] as never);
+
+    commit((d) => applyTemplate(d, t, sources, (i) => `new-${i}`), { label: "应用模板：四分格" });
+
+    const after = useDocStore.getState().doc;
+    const afterSnapshot = JSON.parse(JSON.stringify(after));
+    expect(after.templateId).toBe("grid-2x2");
+    expect(after.instances).toHaveLength(2);
+
+    // 只新增了 1 个历史步骤
+    const past = useDocStore.getState().past;
+    expect(past[past.length - 1].label).toBe("应用模板：四分格");
+
+    useDocStore.getState().undo();
+    expect(JSON.parse(JSON.stringify(useDocStore.getState().doc))).toEqual(beforeSnapshot);
+
+    useDocStore.getState().redo();
+    expect(JSON.parse(JSON.stringify(useDocStore.getState().doc))).toEqual(afterSnapshot);
+
+    // 复用的实例保留了图像级属性
+    const reused = useDocStore.getState().doc.instances.find((i) => i.libraryItemId === "item-a")!;
+    expect(reused.crop).toEqual({ x: 7, y: 8, w: 90, h: 60 });
+    expect(reused.rotation).toBe(90);
+    expect(reused.flipH).toBe(true);
+    expect(reused.border).toEqual({ width: 4, color: "#abcdef" });
+    expect(reused.cornerRadius).toBe(6);
+    void initial;
+  });
+});

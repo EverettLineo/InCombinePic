@@ -32,6 +32,7 @@ export function CanvasArea() {
   const setSelection = useViewStore((s) => s.setSelection);
   const toggleSelection = useViewStore((s) => s.toggleSelection);
   const clearSelection = useViewStore((s) => s.clearSelection);
+  const openCellPicker = useViewStore((s) => s.openCellPicker);
 
   useCanvasShortcuts();
 
@@ -220,6 +221,7 @@ export function CanvasArea() {
           onMoveSelected={handleMoveSelected}
           onResizeSelected={handleResizeSelected}
           onEndMove={handleEndMove}
+          onEmptyCellClick={openCellPicker}
           onZoomAt={zoomAt}
           onPanBy={panBy}
         />
