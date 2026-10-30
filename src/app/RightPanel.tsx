@@ -1,12 +1,13 @@
 import { useState } from "react";
+import { CanvasPanel } from "../features/canvas/CanvasPanel";
 import { AlignBar } from "../features/layers/AlignBar";
 import { LayerPanel } from "../features/layers/LayerPanel";
 import { InspectorPanel } from "../features/inspector/InspectorPanel";
 
-type RightTab = "props" | "layers";
+type RightTab = "props" | "layers" | "canvas";
 
 /**
- * 右侧面板外壳：属性 / 图层两个标签页 + 多选编排条。
+ * 右侧面板外壳：属性 / 图层 / 画布 三个标签页 + 多选编排条。
  *
  * 标签页状态是纯界面状态，不入 viewStore：viewStore 承载的是缩放/平移/选中
  * 这类与画布内容对应的状态，面板开合与之无关，放进去只会让撤销与持久化的
@@ -34,12 +35,20 @@ export function RightPanel() {
         >
           图层
         </button>
+        <button
+          role="tab"
+          aria-selected={tab === "canvas"}
+          className={`panel__tab${tab === "canvas" ? " panel__tab--active" : ""}`}
+          onClick={() => setTab("canvas")}
+        >
+          画布
+        </button>
       </div>
 
       <AlignBar />
 
       <div className="panel__body">
-        {tab === "props" ? <InspectorPanel /> : <LayerPanel />}
+        {tab === "props" ? <InspectorPanel /> : tab === "layers" ? <LayerPanel /> : <CanvasPanel />}
       </div>
     </aside>
   );

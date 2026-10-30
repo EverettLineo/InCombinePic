@@ -284,3 +284,38 @@ describe("模板切换的原子性与可逆性（T8.9）", () => {
     void initial;
   });
 });
+
+describe("画布属性进撤销栈（T9.6）", () => {
+  it("背景切换、渐变参数、画布尺寸都可撤销", async () => {
+    const { setBackground, setCanvasSize } = await import("../domain/document");
+    const { commit } = useDocStore.getState();
+
+    commit((d) => setBackground(d, { type: "solid", color: "#ff0000" }), { label: "背景：纯色" });
+    commit((d) => setBackground(d, { type: "linear", from: "#ffffff", to: "#000000", angle: 45 }), {
+      label: "背景：渐变",
+    });
+    commit((d) => setCanvasSize(d, 3000, 2000), { label: "调整画布尺寸" });
+
+    const s = useDocStore.getState();
+    expect(s.past).toHaveLength(3);
+    expect(s.doc.canvas.background).toEqual({ type: "linear", from: "#ffffff", to: "#000000", angle: 45 });
+    expect(s.doc.canvas.width).toBe(3000);
+
+    useDocStore.getState().undo();
+    expect(useDocStore.getState().doc.canvas.width).toBe(2400);
+    useDocStore.getState().undo();
+    expect(useDocStore.getState().doc.canvas.background).toEqual({ type: "solid", color: "#ff0000" });
+    useDocStore.getState().undo();
+    expect(useDocStore.getState().doc.canvas.background).toEqual({ type: "white" });
+  });
+
+  it("画布尺寸变化不移动已有实例（基线 §5.3）", async () => {
+    const { setCanvasSize, addInstance } = await import("../domain/document");
+    const { commit } = useDocStore.getState();
+    commit((d) => addInstance(d, inst("a")), { label: "添加图片" });
+
+    const before = useDocStore.getState().doc.instances[0].frame;
+    commit((d) => setCanvasSize(d, 3000, 2000), { label: "调整画布尺寸" });
+    expect(useDocStore.getState().doc.instances[0].frame).toEqual(before);
+  });
+});

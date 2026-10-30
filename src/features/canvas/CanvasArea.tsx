@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { filterAliveSelection, updateInstance } from "../../domain/document";
+import { overflowReport } from "../../domain/canvas";
 import { snapMove, type SnapGuide } from "../../domain/snap";
 import type { Frame, Id } from "../../domain/types";
 import { useDocStore } from "../../state/docStore";
@@ -160,6 +161,7 @@ export function CanvasArea() {
   }
 
   const hasInstances = doc.instances.length > 0;
+  const overflow = overflowReport(doc);
 
   return (
     <main className="canvas-area" ref={hostRef}>
@@ -200,6 +202,7 @@ export function CanvasArea() {
           {hasInstances ? ` · ${doc.instances.length} 个实例` : ""}
           {scene.pendingCount > 0 ? ` · ${scene.pendingCount} 张加载中` : ""}
           {selection.length > 0 ? ` · 选中 ${selection.length} 个` : ""}
+          {overflow.count > 0 ? ` · ${overflow.count} 张超出边界` : ""}
         </span>
         <span className="canvas-toolbar__spacer" />
         {items.length > 0 ? (

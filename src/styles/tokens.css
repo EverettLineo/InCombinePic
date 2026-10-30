@@ -1149,3 +1149,47 @@ input:focus {
   text-overflow: ellipsis;
   text-align: left;
 }
+
+/* ---------- P9 画布面板 ---------- */
+
+.canvas-presets {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 4px;
+}
+
+.canvas-presets .btn-quiet,
+.bg-types .btn-quiet {
+  font-size: var(--fs-xs);
+  padding: 3px 4px;
+}
+
+.canvas-presets__active,
+.bg-types__active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--text-primary);
+}
+
+.bg-types {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+}
+
+.overflow-note {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  border: 1px solid var(--warning);
+  border-radius: var(--radius-md);
+  background: #fffaf0;
+  color: var(--text-primary);
+  font-size: var(--fs-xs);
+  line-height: 1.6;
+}
+
+.overflow-note strong {
+  color: var(--warning);
+}
