@@ -434,3 +434,113 @@ mod tests {
         assert_eq!(j.quality, 100);
     }
 }
+
+/// 压力测试（T12.4）：20,000 px 导出的真实成本。
+///
+/// 默认 `#[ignore]`，执行方式：
+/// `cargo test --release -- --ignored --nocapture twenty_thousand`
+///
+/// 这条要回答三个问题：能不能成功、占多少内存、要跑多久。
+/// 三者都只能实测——`validateExportSize` 只证明"尺寸合法"，不证明"真的编得出来"。
+#[cfg(test)]
+mod stress {
+    use super::*;
+    use std::io::Cursor;
+    use std::time::Instant;
+
+    /// 与前端 STRIP_H 保持一致（domain/export.ts）
+    const STRIP_H: u32 = 2048;
+
+    /// 生成一条条带。
+    ///
+    /// 用「渐变 + 确定性噪声」而不是纯渐变：纯渐变压缩比可达 200:1，
+    /// 测出来的编码时间会比真实照片乐观一个数量级（第一版就栽在这里，
+    /// PNG 只花了 32ms，因为它几乎没东西可压）。
+    fn fill_strip(width: u32, rows: u32, row_offset: u32, total_h: u32) -> Vec<u8> {
+        let mut buf = vec![0u8; width as usize * rows as usize * 4];
+        for r in 0..rows as usize {
+            let y = row_offset as usize + r;
+            for c in 0..width as usize {
+                let o = (r * width as usize + c) * 4;
+                // 确定性伪噪声（xorshift 式混合），不引入随机源，每次结果一致
+                let n = (c.wrapping_mul(73_856_093) ^ y.wrapping_mul(19_349_663)) >> 8;
+                buf[o] = (((c * 255) / width as usize) as u8).wrapping_add((n & 0x3f) as u8);
+                buf[o + 1] = (((y * 255) / total_h as usize) as u8).wrapping_add(((n >> 6) & 0x3f) as u8);
+                buf[o + 2] = 128u8.wrapping_add(((n >> 12) & 0x3f) as u8);
+                buf[o + 3] = 255;
+            }
+        }
+        buf
+    }
+
+    #[test]
+    #[ignore = "压力测试：2400×20000 导出，需 --release --ignored 显式执行"]
+    fn twenty_thousand_px_export_is_feasible() {
+        let w = 2400u32;
+        let h = 20_000u32;
+
+        // 1) 分配整幅缓冲（192 MB）
+        let t = Instant::now();
+        let mut job = Job::new(w, h, ExportFormat::Png, 92).expect("192MB 缓冲应能分配");
+        let alloc = t.elapsed();
+        assert_eq!(job.buf.len(), w as usize * h as usize * 4);
+
+        // 2) 逐条带写入，模拟前端 10 次 IPC
+        let t = Instant::now();
+        let mut row = 0u32;
+        let mut strips = 0u32;
+        while row < h {
+            let rows = STRIP_H.min(h - row);
+            let buf = fill_strip(w, rows, row, h);
+            job.write_strip(row, rows, &buf).unwrap();
+            row += rows;
+            strips += 1;
+        }
+        let fill = t.elapsed();
+        assert_eq!(job.filled, h);
+
+        // 3) PNG 编码（无损，最坏情况）
+        let t = Instant::now();
+        let png = job.encode().expect("PNG 编码应成功");
+        let png_time = t.elapsed();
+
+        // 4) 同一缓冲改编码 JPEG 92
+        job.format = ExportFormat::Jpeg;
+        job.quality = 92;
+        let t = Instant::now();
+        let jpg = job.encode().expect("JPEG 编码应成功");
+        let jpg_time = t.elapsed();
+
+        // 5) 只读文件头校验尺寸，不整幅解码（否则又要 192 MB + 十几秒）
+        let png_dim = image::ImageReader::new(Cursor::new(&png))
+            .with_guessed_format()
+            .unwrap()
+            .into_dimensions()
+            .unwrap();
+        let jpg_dim = image::ImageReader::new(Cursor::new(&jpg))
+            .with_guessed_format()
+            .unwrap()
+            .into_dimensions()
+            .unwrap();
+        assert_eq!(png_dim, (w, h));
+        assert_eq!(jpg_dim, (w, h));
+
+        let buf_mb = job.buf.len() / 1024 / 1024;
+        let peak_mb = (job.buf.len() + png.len()) / 1024 / 1024;
+        println!("---- T12.4 2400×20000 导出（渐变+噪声，接近照片熵）----");
+        println!("分配缓冲        : {:.2?}（{buf_mb} MB）", alloc);
+        println!("写入 {strips} 条条带  : {:.2?}", fill);
+        println!("PNG 编码        : {:.2?} → {} MB", png_time, png.len() / 1024 / 1024);
+        println!("JPEG 编码       : {:.2?} → {} MB", jpg_time, jpg.len() / 1024 / 1024);
+        println!("峰值内存估算    : {peak_mb} MB（缓冲 + PNG 输出）");
+
+        // 预算：整条链路 120 秒内完成。导出是用户显式等待的操作，但仍要有上限
+        let total = alloc + fill + png_time;
+        assert!(total.as_secs() < 120, "PNG 链路总耗时 {total:.2?} 超出预算");
+        // 两种格式都必须产出非空数据（不再假设 PNG 一定比 JPEG 大：
+        // 合成图上 PNG 可以比 JPEG 小得多，体积大小取决于内容，不是格式的定律）
+        assert!(png.len() > 1024 && jpg.len() > 1024, "编码结果不应为空");
+        // 峰值必须仍在可控范围：缓冲 192MB + 输出不超过同量级
+        assert!(peak_mb < 700, "峰值 {peak_mb} MB 超出预期");
+    }
+}

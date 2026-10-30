@@ -33,6 +33,19 @@ pub struct ImageMeta {
 /// 单张图片超过该像素数时提示内存风险（不是硬性上限，用户可继续）
 pub const RISK_MEGAPIXELS: f64 = 40.0;
 
+/// 解码后 RGBA 估算（MB）。4 字节/像素、1024 进制，与前端展示口径一致。
+///
+/// 抽成纯函数的原因：直接用一张 40 MP 的真图去测阈值，单测会吃掉 160 MB 内存；
+/// 而阈值本身只是两个数的比较，不该为了测它去造一张大图。
+pub fn estimate_rgba_mb(width: u32, height: u32) -> f64 {
+    (width as f64 * height as f64 * 4.0) / (1024.0 * 1024.0)
+}
+
+/// 是否超过单张风险阈值。阈值只在这里定义一次，前端只读结果。
+pub fn is_risky(width: u32, height: u32) -> bool {
+    width as f64 * height as f64 > RISK_MEGAPIXELS * 1_000_000.0
+}
+
 fn map_format(f: image::ImageFormat) -> Option<&'static str> {
     match f {
         image::ImageFormat::Png => Some("png"),
@@ -181,7 +194,6 @@ pub fn probe_one(path_str: &str) -> ProbeOutcome {
         std::mem::swap(&mut w, &mut h);
     }
 
-    let px = (w as f64) * (h as f64);
     ProbeOutcome {
         path: path_str.to_string(),
         ok: true,
@@ -192,8 +204,8 @@ pub fn probe_one(path_str: &str) -> ProbeOutcome {
             has_alpha: img.color().has_alpha(),
             file_size,
             exif_orientation: orientation,
-            estimated_rgba_mb: (px * 4.0) / (1024.0 * 1024.0),
-            risky: px > RISK_MEGAPIXELS * 1_000_000.0,
+            estimated_rgba_mb: estimate_rgba_mb(w, h),
+            risky: is_risky(w, h),
         }),
         error: None,
     }
@@ -454,5 +466,101 @@ mod tests {
         let dst = d.join("t.png");
         let r = make_thumbnail(&bad, &dst, 64);
         assert!(r.is_err(), "坏文件必须报错而不是产出空图");
+    }
+}
+
+/// 压力测试（T12.3）。
+///
+/// 默认 `#[ignore]`：常规 `cargo test` 不该被压测拖慢，但这条必须能随时重跑。
+/// 执行方式：`cargo test --release -- --ignored --nocapture stress`
+///
+/// 为什么必须在 release 下跑：debug 构建的图像解码慢一个数量级，
+/// 用 debug 数字做容量判断会得出完全错误的结论。
+#[cfg(test)]
+mod stress {
+    use super::*;
+    use image::{Rgb, RgbImage};
+    use std::time::Instant;
+
+    #[test]
+    #[ignore = "压力测试：50 张 6MP 图片导入，需 --release --ignored 显式执行"]
+    fn fifty_photos_probe_within_budget() {
+        let dir = std::env::temp_dir().join(format!("pintu_stress_{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+
+        // 生成 50 张 3000×2000 JPEG：手机照片的典型量级（6 MP / 单张解码约 24 MB RGBA）
+        let t = Instant::now();
+        let mut paths = Vec::with_capacity(50);
+        for i in 0..50u32 {
+            let p = dir.join(format!("photo_{i:02}.jpg"));
+            let img = RgbImage::from_fn(3000, 2000, |x, y| {
+                Rgb([(x % 256) as u8, (y % 256) as u8, ((i * 5) % 256) as u8])
+            });
+            img.save_with_format(&p, image::ImageFormat::Jpeg).unwrap();
+            paths.push(p.to_string_lossy().to_string());
+        }
+        let gen_time = t.elapsed();
+
+        let t = Instant::now();
+        let outcomes = probe_many(&paths);
+        let elapsed = t.elapsed();
+
+        let ok = outcomes.iter().filter(|o| o.ok).count();
+        let total_mb: f64 = outcomes
+            .iter()
+            .filter_map(|o| o.meta.as_ref())
+            .map(|m| m.estimated_rgba_mb)
+            .sum();
+
+        println!("---- T12.3 50 张 3000×2000 JPEG ----");
+        println!("生成耗时      : {:.2?}", gen_time);
+        println!(
+            "探测总耗时    : {:.2?}（{:.1} ms/张）",
+            elapsed,
+            elapsed.as_secs_f64() * 1000.0 / 50.0
+        );
+        println!("成功          : {ok}/50");
+        println!("解码后总占用  : {:.0} MB（若同时驻留）", total_mb);
+
+        assert_eq!(ok, 50, "50 张正常 JPEG 必须全部探测成功");
+        // 顺序解码下峰值只取决于单张，与张数无关
+        assert!(total_mb > 1000.0, "50 张 6MP 累计应超过 1 GB，说明估算口径生效");
+        // 预算：单张平均不超过 400ms（release）。超出说明探测路径退化成了二次解码
+        assert!(
+            elapsed.as_secs_f64() / 50.0 < 0.4,
+            "单张平均耗时 {:.1} ms 超出预算",
+            elapsed.as_secs_f64() * 1000.0 / 50.0
+        );
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+}
+
+/// 风险阈值的边界用例（对应 T12.2 的「超大」一类）。
+///
+/// 不造真图：40 MP 的位图要 160 MB 内存，而这里要验的只是两个数的比较。
+#[cfg(test)]
+mod thresholds {
+    use super::*;
+
+    #[test]
+    fn rgba_estimate_follows_display_convention() {
+        // 4000×3000 = 12 MP → 45.78 MB（前端列表与预警用的就是这个数）
+        assert!((estimate_rgba_mb(4000, 3000) - 45.776).abs() < 0.01);
+        // 1×1 也必须是正数，不能出现 0 导致"估算为 0 MB"的误导
+        assert!(estimate_rgba_mb(1, 1) > 0.0);
+    }
+
+    #[test]
+    fn risk_flag_flips_just_above_forty_megapixels() {
+        // 8000×5000 正好 40 MP：阈值是"大于"，不算风险
+        assert!(!is_risky(8000, 5000));
+        // 多 1 行就超阈值
+        assert!(is_risky(8000, 5001));
+        // 20000 宽的单边极端值同样被判为风险
+        assert!(is_risky(20_000, 3000));
+        // 常见手机照片不触发（4032×3024 ≈ 12.2 MP）
+        assert!(!is_risky(4032, 3024));
     }
 }
