@@ -6,6 +6,7 @@ import {
   cursorForHandle,
   frameCenter,
   handlePoints,
+  toImageCrop,
 } from "./transform";
 import type { CropRect, Frame } from "./types";
 
@@ -171,5 +172,25 @@ describe("cursorForHandle", () => {
     expect(cursorForHandle("ne")).toBe("nesw-resize");
     expect(cursorForHandle("n")).toBe("ns-resize");
     expect(cursorForHandle("e")).toBe("ew-resize");
+  });
+});
+
+describe("toImageCrop", () => {
+  it("按位图/源图比例缩放裁剪坐标", () => {
+    expect(toImageCrop({ x: 100, y: 200, w: 400, h: 300 }, 0.5)).toEqual({
+      x: 50,
+      y: 100,
+      w: 200,
+      h: 150,
+    });
+  });
+
+  it("比例为 1 时原样返回（未降采样的图）", () => {
+    expect(toImageCrop({ x: 1, y: 2, w: 3, h: 4 }, 1)).toEqual({ x: 1, y: 2, w: 3, h: 4 });
+  });
+
+  it("比例非法时退化为 1，不产生 NaN 坐标", () => {
+    expect(toImageCrop({ x: 1, y: 2, w: 3, h: 4 }, 0)).toEqual({ x: 1, y: 2, w: 3, h: 4 });
+    expect(toImageCrop({ x: 1, y: 2, w: 3, h: 4 }, Number.NaN)).toEqual({ x: 1, y: 2, w: 3, h: 4 });
   });
 });

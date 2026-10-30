@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { CanvasArea } from "../features/canvas/CanvasArea";
+import { CropEditor } from "../features/crop/CropEditor";
 import { LibraryPanel } from "../features/library/LibraryPanel";
 import { BenchScreen } from "../features/scene/BenchScreen";
 import { RightPanel } from "./RightPanel";
@@ -82,6 +83,8 @@ export default function App() {
 
         <RightPanel />
       </div>
+
+      <CropEditor />
 
       {error ? (
         <div className="error-box">

@@ -258,3 +258,25 @@ describe("多实例场景", () => {
     expect(instanceCountByLibraryItem(next, "lib-1")).toBe(1);
   });
 });
+
+describe("旋转与裁剪互不影响（T7.3）", () => {
+  it("旋转后裁剪，再转回原角度，裁剪数据保持不变", () => {
+    let doc = addInstance(createEmptyDocument(), inst("a", 0));
+    doc = rotateInstance(doc, "a", 90);
+    doc = setCrop(doc, "a", { x: 40, y: 20, w: 200, h: 100 }, { w: 400, h: 300 });
+    const cropAfterRotatedCrop = doc.instances[0].crop;
+    expect(cropAfterRotatedCrop).toEqual({ x: 40, y: 20, w: 200, h: 100 });
+
+    doc = rotateInstance(doc, "a", -90);
+    expect(doc.instances[0].rotation).toBe(0);
+    expect(doc.instances[0].crop).toEqual(cropAfterRotatedCrop);
+  });
+
+  it("旋转不会回写 crop（显示时的二次裁切只是读取）", () => {
+    let doc = addInstance(createEmptyDocument(), inst("a", 0));
+    doc = setCrop(doc, "a", { x: 10, y: 10, w: 120, h: 60 }, { w: 400, h: 300 });
+    const before = doc.instances[0].crop;
+    doc = rotateInstance(doc, "a", 90);
+    expect(doc.instances[0].crop).toEqual(before);
+  });
+});

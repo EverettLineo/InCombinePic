@@ -7,12 +7,15 @@
 
 import Konva from "konva";
 import type { SnapGuide } from "../../domain/snap";
-import { coverCrop, frameCenter, handlePoints } from "../../domain/transform";
+import { coverCrop, frameCenter, handlePoints, toImageCrop } from "../../domain/transform";
 import type { Background, CanvasSpec, DocumentState, Id } from "../../domain/types";
 import type { SceneDescriptor } from "./derive";
 
 /** 控制点在屏幕上的边长（px），与视图缩放无关 */
 const HANDLE_SIZE_PX = 7;
+
+/** Group → 其子节点引用。用 WeakMap 避免每次同步都做选择器查找 */
+const bundles = new WeakMap<Konva.Group, { image: Konva.Image; border: Konva.Rect }>();
 
 /** 棋盘格仅用于透明背景的预览提示，不是用户可选的背景类型（基线 §10.1） */
 function makeCheckerPattern(): HTMLCanvasElement {
@@ -76,11 +79,15 @@ export function syncBackground(layer: Konva.Layer, canvas: CanvasSpec) {
 /**
  * 内容层：按 id 做 diff，只更新变化项。
  * 未就绪的图像直接跳过——宁可先不画，也不要画在错误位置或拉伸变形。
+ *
+ * 每个实例是一个 Group（承载位置/旋转/透明度/圆角裁剪）+ 一个 Image（承载裁剪与翻转）
+ * + 一个 Rect（边框）。分组的理由：Konva 的 Image 是 Shape 不是容器，无法自己裁剪自身；
+ * 圆角必须靠父容器的 clipFunc 实现。
  */
 export function syncLayer(layer: Konva.Layer, scene: SceneDescriptor): void {
-  const existing = new Map<string, Konva.Image>();
+  const existing = new Map<string, Konva.Group>();
   for (const child of layer.getChildren()) {
-    existing.set(child.id(), child as Konva.Image);
+    existing.set(child.id(), child as Konva.Group);
   }
 
   const alive = new Set<string>();
@@ -93,32 +100,96 @@ export function syncLayer(layer: Konva.Layer, scene: SceneDescriptor): void {
     if (r.scale <= 0) return;
     const { cx, cy } = frameCenter(n.frame);
 
-    let node = existing.get(n.id);
-    if (!node) {
-      node = new Konva.Image({ image: n.source.image as HTMLImageElement, listening: false });
-      node.id(n.id);
-      layer.add(node);
-    } else {
-      node.image(n.source.image as HTMLImageElement);
+    let group = existing.get(n.id);
+    let bundle = group ? bundles.get(group) : undefined;
+    if (!group || !bundle) {
+      const image = new Konva.Image({
+        image: undefined as unknown as HTMLImageElement,
+        listening: false,
+      });
+      const border = new Konva.Rect({ listening: false, fillEnabled: false });
+      group = new Konva.Group({ id: n.id, listening: false });
+      group.add(image);
+      group.add(border);
+      bundles.set(group, { image, border });
+      layer.add(group);
+      bundle = { image, border };
     }
 
-    node.crop({ x: r.crop.x, y: r.crop.y, width: r.crop.w, height: r.crop.h });
-    node.width(r.drawW);
-    node.height(r.drawH);
-    node.offsetX(r.drawW / 2);
-    node.offsetY(r.drawH / 2);
-    node.position({ x: cx, y: cy });
-    node.rotation(n.rotation);
-    node.scaleX(n.flipH ? -1 : 1);
-    node.scaleY(n.flipV ? -1 : 1);
-    node.opacity(n.opacity);
-    node.zIndex(index);
+    const { image, border } = bundle;
+    const ic = toImageCrop(r.crop, n.source.pixelScale);
+    image.image(n.source.image as HTMLImageElement);
+    image.crop({ x: ic.x, y: ic.y, width: ic.w, height: ic.h });
+    image.width(r.drawW);
+    image.height(r.drawH);
+    image.offsetX(r.drawW / 2);
+    image.offsetY(r.drawH / 2);
+    image.position({ x: 0, y: 0 });
+    image.scaleX(n.flipH ? -1 : 1);
+    image.scaleY(n.flipV ? -1 : 1);
+
+    group.position({ x: cx, y: cy });
+    group.rotation(n.rotation);
+    group.opacity(n.opacity);
+    group.zIndex(index);
+
+    // 圆角：按显示框裁剪内容。半径上限取短边一半，否则路径自交会画出奇怪形状
+    const halfW = n.frame.w / 2;
+    const halfH = n.frame.h / 2;
+    group.clipFunc((ctx) => {
+      roundedRectPath(ctx, -halfW, -halfH, n.frame.w, n.frame.h, n.cornerRadius);
+    });
+
+    // 边框画在显示框**内侧**：格子是拼接的基本单元，向外画会压到相邻图（ADR-0006）
+    const bw = Math.max(0, n.border.width);
+    border.visible(bw > 0);
+    if (bw > 0) {
+      const inset = bw / 2;
+      const iw = Math.max(1, n.frame.w - bw);
+      const ih = Math.max(1, n.frame.h - bw);
+      border.position({ x: -halfW + inset, y: -halfH + inset });
+      border.width(iw);
+      border.height(ih);
+      border.stroke(n.border.color);
+      border.strokeWidth(bw);
+      border.cornerRadius(
+        Math.max(0, Math.min(n.cornerRadius - inset, Math.min(iw, ih) / 2)),
+      );
+    }
   });
 
   // 移除已不存在的实例（例如释放资源后其关联实例被删除）
   for (const [id, node] of existing) {
     if (!alive.has(id)) node.destroy();
   }
+}
+
+/** 圆角矩形路径（供 clipFunc 使用；Konva 的 Context 代理了 2D 上下文方法） */
+function roundedRectPath(
+  ctx: Konva.Context,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  radius: number,
+): void {
+  const r = Math.max(0, Math.min(radius, Math.min(w, h) / 2));
+  ctx.beginPath();
+  if (r <= 0) {
+    ctx.rect(x, y, w, h);
+    ctx.closePath();
+    return;
+  }
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.arcTo(x + w, y, x + w, y + r, r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
+  ctx.lineTo(x + r, y + h);
+  ctx.arcTo(x, y + h, x, y + h - r, r);
+  ctx.lineTo(x, y + r);
+  ctx.arcTo(x, y, x + r, y, r);
+  ctx.closePath();
 }
 
 /** 画布边界线：帮助用户看清导出范围，不导出（基线 §10.2） */

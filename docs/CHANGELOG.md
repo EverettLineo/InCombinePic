@@ -6,6 +6,31 @@
 
 ---
 
+## 2026-10-30 · P7 裁剪与图像属性
+
+**新增**
+
+- `domain/crop.ts`：`cropAspectFor`（锁定格子比例，旋转 90/270 取倒数）、`toNorm`/`toSource`、`moveCrop`、`resizeCrop`（八向，角点对角固定/边点中线固定）
+- `features/crop/CropEditor`：独立浮层，展示完整源图 + 遮罩 + 八向控制点，`Esc`/点遮罩取消
+- 属性面板：裁剪数值（源图像素）+ 还原全图；透明度滑块 + 数值；边框粗细/颜色；圆角半径
+- `domain/transform.ts`：`toImageCrop` —— 源图像素裁剪 → 降采样位图坐标
+- 渲染层：实例节点改为 `Group(Image + Border Rect)`，圆角用 `clipFunc`，边框画在内侧
+
+**修复**
+
+- C-001：渲染时把源图像素 crop 直接交给 2048px 预览位图，导致大图裁剪错位/空白（P3 起潜伏）
+
+**验证**
+
+- 前端用例 133 → **154 项**（crop 14 / transform +3 / 文档 +2 / store +2）
+- typecheck / lint 0 错误 0 警告
+
+**未完成**
+
+- 裁剪拖动手感与圆角边框视觉的实操验证（KI-17）
+
+---
+
 ## 2026-10-29 · P6 图层、对齐与吸附
 
 **新增**

@@ -23,6 +23,13 @@ async function loadImage(url: string): Promise<HTMLImageElement> {
   return img;
 }
 
+/** 位图像素 / 源图像素。预览图是等比降采样的，单个标量即可描述 */
+function pixelScaleOf(img: HTMLImageElement, item?: LibraryItem): number {
+  const sw = item?.width ?? 0;
+  if (sw <= 0 || img.naturalWidth <= 0) return 1;
+  return img.naturalWidth / sw;
+}
+
 export function useSceneSources(doc: DocumentState, items: LibraryItem[]): SceneSources {
   const [sources, setSources] = useState<SceneSources>({});
 
@@ -39,7 +46,14 @@ export function useSceneSources(doc: DocumentState, items: LibraryItem[]): Scene
     const immediate: SceneSources = {};
     for (const id of needed) {
       const img = imageCache.get(id);
-      if (img) immediate[id] = { image: img, width: img.naturalWidth, height: img.naturalHeight };
+      if (img) {
+        immediate[id] = {
+          image: img,
+          width: img.naturalWidth,
+          height: img.naturalHeight,
+          pixelScale: pixelScaleOf(img, items.find((i) => i.id === id)),
+        };
+      }
     }
     if (Object.keys(immediate).length > 0) {
       setSources((s) => ({ ...s, ...immediate }));
@@ -64,7 +78,12 @@ export function useSceneSources(doc: DocumentState, items: LibraryItem[]): Scene
           if (alive) {
             setSources((s) => ({
               ...s,
-              [id]: { image: img, width: img.naturalWidth, height: img.naturalHeight },
+              [id]: {
+                image: img,
+                width: img.naturalWidth,
+                height: img.naturalHeight,
+                pixelScale: pixelScaleOf(img, item),
+              },
             }));
           }
         } catch {

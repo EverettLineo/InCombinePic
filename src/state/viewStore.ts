@@ -13,6 +13,10 @@ export const MAX_ZOOM = 8;
  * 因此本 store 与 docStore 完全隔离，任何"选中变化"都不应产生撤销记录。
  */
 export interface ViewStore extends ViewState {
+  /** 正在裁剪的实例 id；null 表示未进入裁剪。属于界面状态，不入历史、不持久化 */
+  cropEditor: Id | null;
+  openCropEditor: (id: Id) => void;
+  closeCropEditor: () => void;
   setZoom: (zoom: number) => void;
   /** 以视口内某点为锚缩放（滚轮缩放用，锚点下的内容保持不动） */
   zoomAt: (factor: number, anchorX: number, anchorY: number) => void;
@@ -31,6 +35,10 @@ const initial: ViewState = { zoom: 1, panX: 0, panY: 0, selection: [] };
 
 export const useViewStore = create<ViewStore>((set, get) => ({
   ...initial,
+  cropEditor: null,
+
+  openCropEditor: (id) => set({ cropEditor: id }),
+  closeCropEditor: () => set({ cropEditor: null }),
 
   setZoom: (zoom) => set({ zoom: clamp(zoom, MIN_ZOOM, MAX_ZOOM) }),
 

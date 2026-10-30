@@ -11,8 +11,11 @@ import type { CanvasSpec, DocumentState, Id } from "../../domain/types";
 /** 已加载到内存的图像源（HTMLImageElement 等，由调用方提供） */
 export interface SceneImage {
   image: CanvasImageSource;
+  /** 位图自身的像素尺寸（可能是降采样后的预览图） */
   width: number;
   height: number;
+  /** 位图像素 / 源图像素。用于把 crop 映射到真实位图坐标 */
+  pixelScale: number;
 }
 
 export type SceneSources = Record<Id, SceneImage | undefined>;

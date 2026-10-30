@@ -70,6 +70,18 @@ export function coverCrop(
 }
 
 /**
+ * 把"源图像素"裁剪映射为"已加载位图"的坐标。
+ *
+ * 显示用的是降采样预览图（最长边 2048），而 crop 存的是源图像素。
+ * 直接把 4000px 宽的 crop 交给 2048px 宽的位图会让 Konva 采样到图像外，
+ * 表现为大图整张空白或错位——这一步转换不能省。
+ */
+export function toImageCrop(crop: CropRect, pixelScale: number): CropRect {
+  const s = pixelScale > 0 && Number.isFinite(pixelScale) ? pixelScale : 1;
+  return { x: crop.x * s, y: crop.y * s, w: crop.w * s, h: crop.h * s };
+}
+
+/**
  * 实例在画布坐标系中的中心点。
  * Konva 用 offset 把节点锚点移到中心，因此旋转围绕 frame 中心进行，
  * 与 ARCHITECTURE.md §4「frame 是轴对齐显示框，旋转只作用于内容」一致。

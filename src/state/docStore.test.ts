@@ -171,3 +171,59 @@ describe("commitNoHistory（资源释放路径）", () => {
     expect(useDocStore.getState().doc.instances.length).toBeLessThanOrEqual(1);
   });
 });
+
+describe("图像属性进撤销栈（T7.7）", () => {
+  it("透明度/边框/圆角/裁剪的修改都可撤销", () => {
+    const { commit } = useDocStore.getState();
+    commit((d) => addInstance(d, inst("a")), { label: "添加图片" });
+
+    const steps: Array<(d: ReturnType<typeof createEmptyDocument>) => ReturnType<typeof createEmptyDocument>> = [
+      (d) => ({ ...d, instances: d.instances.map((i) => ({ ...i, opacity: 0.4 })) }),
+      (d) => ({
+        ...d,
+        instances: d.instances.map((i) => ({ ...i, border: { width: 6, color: "#ff0000" } })),
+      }),
+      (d) => ({ ...d, instances: d.instances.map((i) => ({ ...i, cornerRadius: 24 })) }),
+      (d) => ({ ...d, instances: d.instances.map((i) => ({ ...i, crop: { x: 1, y: 2, w: 3, h: 4 } })) }),
+    ];
+    const labels = ["调整不透明度", "调整边框", "调整圆角", "裁剪图片"];
+
+    steps.forEach((fn, i) => commit(fn, { label: labels[i] }));
+
+    const s = useDocStore.getState();
+    expect(s.past).toHaveLength(5);
+
+    // 逐步撤销，每一步只回退一个属性
+    useDocStore.getState().undo();
+    expect(useDocStore.getState().doc.instances[0].crop).toEqual({ x: 0, y: 0, w: 10, h: 10 });
+    useDocStore.getState().undo();
+    expect(useDocStore.getState().doc.instances[0].cornerRadius).toBe(0);
+    useDocStore.getState().undo();
+    expect(useDocStore.getState().doc.instances[0].border.width).toBe(0);
+    useDocStore.getState().undo();
+    expect(useDocStore.getState().doc.instances[0].opacity).toBe(1);
+
+    useDocStore.getState().redo();
+    expect(useDocStore.getState().doc.instances[0].opacity).toBe(0.4);
+  });
+
+  it("滑块连续拖动合并为一步（mergeKey）", () => {
+    const { commit, endMerge } = useDocStore.getState();
+    commit((d) => addInstance(d, inst("a")), { label: "添加图片" });
+
+    for (let v = 1; v <= 20; v++) {
+      commit(
+        (d) => ({ ...d, instances: d.instances.map((i) => ({ ...i, opacity: v / 100 })) }),
+        { label: "调整不透明度", mergeKey: "opacity:a" },
+      );
+    }
+    endMerge();
+
+    const s = useDocStore.getState();
+    expect(s.past).toHaveLength(2); // 添加 + 一次拖动
+    expect(s.doc.instances[0].opacity).toBeCloseTo(0.2, 6);
+
+    useDocStore.getState().undo();
+    expect(useDocStore.getState().doc.instances[0].opacity).toBe(1);
+  });
+});

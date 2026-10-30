@@ -32,7 +32,7 @@ function makeSources(): SceneSources {
       ctx.fillStyle = `rgba(255,255,255,${0.04 + (k % 5) * 0.02})`;
       ctx.fillRect((k * 37) % 480, (k * 23) % 360, 26, 26);
     }
-    sources[`lib-${i}`] = { image: c, width: 480, height: 360 };
+    sources[`lib-${i}`] = { image: c, width: 480, height: 360, pixelScale: 1 };
   }
   return sources;
 }
