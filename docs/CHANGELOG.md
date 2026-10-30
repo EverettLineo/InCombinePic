@@ -6,6 +6,32 @@
 
 ---
 
+## 2026-10-30 · P11 快捷键、退出与配置
+
+**新增**
+
+- `app/useAppShortcuts`：全项目唯一快捷键入口（Ctrl+Z/Y/Shift+Z、Ctrl+A、Ctrl+O、Ctrl+E、Delete、Esc 逐级退让）
+- `app/useCloseGuard`：有未导出编辑时拦截窗口关闭并原生确认
+- `state/prefsStore`：偏好白名单（导出格式/质量、画布尺寸、排序模式、面板标签页）、逐字段校验、400ms 防抖落盘
+- `src-tauri/commands/prefs.rs`：`app_config_dir/prefs.json` 读写，临时文件 + rename
+- `docs/SHORTCUTS.md`：快捷键总表与焦点优先级说明
+- 面板标签与 `Ctrl+O` 的导入请求上移到 `viewStore`
+
+**修复/清理**
+
+- 删除 `useUndoShortcuts` 与 `useCanvasShortcuts`：两个监听器并存会让 Esc 优先级依赖注册顺序
+
+**验证**
+
+- 前端用例 226 → **236 项**（prefs 10）
+- typecheck / lint 0 错误 0 警告
+
+**未完成**
+
+- G11 四条验收均待人工（KI-21）
+
+---
+
 ## 2026-10-30 · P10 导出
 
 **新增**

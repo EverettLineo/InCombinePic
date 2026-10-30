@@ -6,6 +6,7 @@
 import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 import type { ExportFormat } from "../domain/export";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { ask, open, save } from "@tauri-apps/plugin-dialog";
 
 /** 与 src-tauri/src/error.rs 的 ErrorCode 保持一致 */
@@ -234,4 +235,33 @@ export async function pickSavePath(
     ],
   });
   return result ?? null;
+}
+
+// ---------- 偏好与窗口（T11.3 / T11.4） ----------
+
+/** 读取偏好原文；不存在或不可读时返回 null（由前端回落默认值） */
+export async function loadPrefsJson(): Promise<string | null> {
+  return invoke<string | null>("load_prefs");
+}
+
+export async function savePrefsJson(json: string): Promise<void> {
+  await invoke("save_prefs", { json });
+}
+
+/**
+ * 拦截窗口关闭请求。
+ * 处理函数拿到 `preventDefault` 后应先拦住关闭，再决定是否 `destroyWindow()`。
+ */
+export async function onCloseRequested(
+  handler: (preventDefault: () => void) => Promise<void> | void,
+): Promise<() => void> {
+  const win = getCurrentWindow();
+  return win.onCloseRequested(async (event) => {
+    await handler(() => event.preventDefault());
+  });
+}
+
+/** 强制关闭窗口（已确认要退出时使用，不会再触发一次关闭确认） */
+export async function destroyWindow(): Promise<void> {
+  await getCurrentWindow().destroy();
 }

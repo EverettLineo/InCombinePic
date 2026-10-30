@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { normalizeError, onFileDrop, type AppErrorPayload } from "../../platform/ipc";
+import { useViewStore } from "../../state/viewStore";
 import {
   importFromClipboard,
   importFromDrop,
@@ -43,6 +44,14 @@ export function useImportController() {
 
   const runPicker = useCallback(() => run(importImages), [run]);
   const runClipboard = useCallback(() => run(importFromClipboard), [run]);
+
+  // Ctrl+O：由全局快捷键点亮 pendingImport，这里消费并打开选择器
+  const pendingImport = useViewStore((s) => s.pendingImport);
+  useEffect(() => {
+    if (!pendingImport || busyRef.current) return;
+    useViewStore.getState().consumeImport();
+    void runPicker();
+  }, [pendingImport, runPicker]);
 
   useEffect(() => {
     let unlisten: (() => void) | undefined;

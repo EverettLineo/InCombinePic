@@ -3,3 +3,4 @@ pub mod bench;
 pub mod clipboard;
 pub mod export;
 pub mod import;
+pub mod prefs;

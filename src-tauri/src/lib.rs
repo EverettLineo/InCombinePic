@@ -26,7 +26,9 @@ pub fn run() {
             commands::export::export_abort,
             commands::export::path_exists,
             commands::export::open_exported,
-            commands::export::reveal_exported
+            commands::export::reveal_exported,
+            commands::prefs::load_prefs,
+            commands::prefs::save_prefs
         ])
         .run(tauri::generate_context!())
         .expect("应用启动失败");

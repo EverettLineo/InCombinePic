@@ -10,7 +10,6 @@ import { KonvaStage } from "../scene/KonvaStage";
 import { deriveScene } from "../scene/derive";
 import { placeAllItems } from "./placement";
 import { useSceneSources } from "./useSceneSources";
-import { useCanvasShortcuts } from "./useCanvasShortcuts";
 
 /** 吸附阈值（屏幕像素）：折算到画布坐标后，不同缩放下的手感一致 */
 const SNAP_SCREEN_PX = 6;
@@ -35,7 +34,6 @@ export function CanvasArea() {
   const clearSelection = useViewStore((s) => s.clearSelection);
   const openCellPicker = useViewStore((s) => s.openCellPicker);
 
-  useCanvasShortcuts();
 
   const sources = useSceneSources(doc, items);
   const scene = deriveScene(doc, sources);

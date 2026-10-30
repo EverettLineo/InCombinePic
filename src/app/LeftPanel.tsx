@@ -1,8 +1,6 @@
-import { useState } from "react";
 import { LibraryPanel } from "../features/library/LibraryPanel";
 import { TemplatePanel } from "../features/templates/TemplatePanel";
-
-type LeftTab = "library" | "templates";
+import { useViewStore } from "../state/viewStore";
 
 /**
  * 左侧面板外壳：资源库 / 模板两个标签页。
@@ -10,7 +8,8 @@ type LeftTab = "library" | "templates";
  * 与右栏同样的理由：标签页是纯界面状态，不入 viewStore，也不进撤销历史。
  */
 export function LeftPanel() {
-  const [tab, setTab] = useState<LeftTab>("library");
+  const tab = useViewStore((s) => s.leftTab);
+  const setTab = useViewStore((s) => s.setLeftTab);
 
   return (
     <aside className="panel panel--left">

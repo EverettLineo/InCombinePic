@@ -1,10 +1,8 @@
-import { useState } from "react";
 import { CanvasPanel } from "../features/canvas/CanvasPanel";
 import { AlignBar } from "../features/layers/AlignBar";
 import { LayerPanel } from "../features/layers/LayerPanel";
 import { InspectorPanel } from "../features/inspector/InspectorPanel";
-
-type RightTab = "props" | "layers" | "canvas";
+import { useViewStore } from "../state/viewStore";
 
 /**
  * 右侧面板外壳：属性 / 图层 / 画布 三个标签页 + 多选编排条。
@@ -14,7 +12,8 @@ type RightTab = "props" | "layers" | "canvas";
  * 边界判断更难写。
  */
 export function RightPanel() {
-  const [tab, setTab] = useState<RightTab>("props");
+  const tab = useViewStore((s) => s.rightTab);
+  const setTab = useViewStore((s) => s.setRightTab);
 
   return (
     <aside className="panel panel--right">

@@ -4,7 +4,6 @@ import {
   defaultExportName,
   ensureExtension,
   heightForWidth,
-  JPEG_QUALITY_DEFAULT,
   JPEG_QUALITY_MAX,
   JPEG_QUALITY_MIN,
   transparencyNote,
@@ -22,6 +21,7 @@ import {
 } from "../../platform/ipc";
 import { useDocStore } from "../../state/docStore";
 import { useExportStore } from "../../state/exportStore";
+import { usePrefsStore } from "../../state/prefsStore";
 import { useViewStore } from "../../state/viewStore";
 import { runExport } from "./exportFlow";
 
@@ -56,8 +56,10 @@ function ExportSession() {
   const reset = useExportStore((s) => s.reset);
   const requestCancel = useExportStore((s) => s.requestCancel);
 
-  const [format, setFormat] = useState<ExportFormat>("png");
-  const [quality, setQuality] = useState(JPEG_QUALITY_DEFAULT);
+  // 初值来自偏好：同一台机器上用户上次选的格式不该每次重置（T11.4）
+  const prefs = usePrefsStore((s) => s.prefs);
+  const [format, setFormat] = useState<ExportFormat>(prefs.exportFormat);
+  const [quality, setQuality] = useState(prefs.jpegQuality);
   const [width, setWidth] = useState(doc.canvas.width);
   const [height, setHeight] = useState(doc.canvas.height);
   const [lockAspect, setLockAspect] = useState(true);
@@ -70,7 +72,13 @@ function ExportSession() {
 
   function switchFormat(next: ExportFormat) {
     setFormat(next);
+    usePrefsStore.getState().setPrefs({ exportFormat: next });
     setPath((p) => (p ? ensureExtension(p, next) : p));
+  }
+
+  function changeQuality(v: number) {
+    setQuality(v);
+    usePrefsStore.getState().setPrefs({ jpegQuality: v });
   }
 
   function changeWidth(v: number) {
@@ -179,7 +187,7 @@ function ExportSession() {
                 max={JPEG_QUALITY_MAX}
                 step={1}
                 value={quality}
-                onChange={(e) => setQuality(Number(e.target.value))}
+                onChange={(e) => changeQuality(Number(e.target.value))}
                 disabled={running}
                 aria-label="JPEG 质量"
               />

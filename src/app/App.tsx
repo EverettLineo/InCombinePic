@@ -14,9 +14,11 @@ import {
   type AppInfo,
 } from "../platform/ipc";
 import { useDocStore } from "../state/docStore";
+import { initPrefs } from "../state/prefsStore";
 import { useViewStore } from "../state/viewStore";
 import { ErrorBoundary } from "../ui/ErrorBoundary";
-import { useUndoShortcuts } from "./useUndoShortcuts";
+import { useAppShortcuts } from "./useAppShortcuts";
+import { useCloseGuard } from "./useCloseGuard";
 import { nextUndoLabel } from "../domain/history";
 
 /** 应用外壳：三栏工作区（左资源 / 中画布 / 右属性），遵循基线 §5.2 */
@@ -25,6 +27,8 @@ export default function App() {
   const [error, setError] = useState<AppErrorPayload | null>(null);
   /** null = 尚未判定，避免基准模式未判定时就渲染主界面又切走 */
   const [bench, setBench] = useState<boolean | null>(null);
+  /** 偏好加载完成后才渲染主界面，避免先闪一帧默认画布尺寸再跳变 */
+  const [prefsReady, setPrefsReady] = useState(false);
 
   const dirty = useDocStore((s) => s.dirty);
   const past = useDocStore((s) => s.past);
@@ -32,7 +36,8 @@ export default function App() {
   const undo = useDocStore((s) => s.undo);
   const redo = useDocStore((s) => s.redo);
 
-  useUndoShortcuts();
+  useAppShortcuts();
+  useCloseGuard();
 
   useEffect(() => {
     getAppInfo()
@@ -41,10 +46,14 @@ export default function App() {
     isBenchRequested()
       .then(setBench)
       .catch(() => setBench(false));
+    void initPrefs()
+      .catch(() => undefined)
+      .finally(() => setPrefsReady(true));
   }, []);
 
   if (bench === null) return null;
   if (bench) return <BenchScreen />;
+  if (!prefsReady) return null;
 
   const undoLabel = nextUndoLabel({ past, future });
 

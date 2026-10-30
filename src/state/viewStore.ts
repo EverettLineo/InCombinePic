@@ -12,6 +12,9 @@ export const MAX_ZOOM = 8;
  * 视图状态**不进入撤销历史、不持久化、不影响导出像素尺寸**。
  * 因此本 store 与 docStore 完全隔离，任何"选中变化"都不应产生撤销记录。
  */
+export type LeftTab = "library" | "templates";
+export type RightTab = "props" | "layers" | "canvas";
+
 /** 选图弹窗的两个用途：填入模板空格 / 替换已有实例的图片 */
 export type PickerTarget =
   | { kind: "cell"; cellIndex: number }
@@ -26,6 +29,15 @@ export interface ViewStore extends ViewState {
   exportOpen: boolean;
   openExport: () => void;
   closeExport: () => void;
+  /** 左/右面板当前标签页：放这里是为了让偏好持久化与快捷键（Ctrl+O）都能改它 */
+  leftTab: LeftTab;
+  rightTab: RightTab;
+  setLeftTab: (tab: LeftTab) => void;
+  setRightTab: (tab: RightTab) => void;
+  /** 是否有待执行的导入请求（Ctrl+O 触发，由资源库面板消费） */
+  pendingImport: boolean;
+  requestImport: () => void;
+  consumeImport: () => void;
   /** 选图弹窗的目标；null 表示未打开。纯界面状态 */
   picker: PickerTarget | null;
   openCellPicker: (cellIndex: number) => void;
@@ -52,6 +64,9 @@ export const useViewStore = create<ViewStore>((set, get) => ({
   cropEditor: null,
   picker: null,
   exportOpen: false,
+  leftTab: "library" as LeftTab,
+  rightTab: "props" as RightTab,
+  pendingImport: false,
 
   openCropEditor: (id) => set({ cropEditor: id }),
   closeCropEditor: () => set({ cropEditor: null }),
@@ -60,6 +75,11 @@ export const useViewStore = create<ViewStore>((set, get) => ({
   closePicker: () => set({ picker: null }),
   openExport: () => set({ exportOpen: true }),
   closeExport: () => set({ exportOpen: false }),
+
+  setLeftTab: (tab) => set({ leftTab: tab }),
+  setRightTab: (tab) => set({ rightTab: tab }),
+  requestImport: () => set({ pendingImport: true, leftTab: "library" }),
+  consumeImport: () => set({ pendingImport: false }),
 
   setZoom: (zoom) => set({ zoom: clamp(zoom, MIN_ZOOM, MAX_ZOOM) }),
 

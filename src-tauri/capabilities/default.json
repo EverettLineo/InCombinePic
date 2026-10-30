@@ -8,6 +8,7 @@
     "opener:default",
     "dialog:allow-open",
     "dialog:allow-ask",
-    "dialog:allow-save"
+    "dialog:allow-save",
+    "core:window:allow-destroy"
   ]
 }
