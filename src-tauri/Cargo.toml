@@ -35,6 +35,7 @@ fast_image_resize = { version = "6.1", features = ["image"] }
 kamadak-exif = "0.6"
 tauri-plugin-dialog = "2.8.4"
 arboard = "3.7.0"
+base64 = "0.22"
 
 # Read the optimization guideline for more details: https://tauri.app/concept/size/#cargo-configuration
 [profile.release]

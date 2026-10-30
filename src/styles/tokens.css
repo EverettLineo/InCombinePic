@@ -1193,3 +1193,151 @@ input:focus {
 .overflow-note strong {
   color: var(--warning);
 }
+
+/* ---------- P10 导出面板 ---------- */
+
+.header__export {
+  padding: 3px 14px;
+  font-weight: 600;
+}
+
+.export-dialog {
+  background: var(--bg-panel);
+  border-radius: var(--radius-md);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.28);
+  width: 560px;
+  max-width: 92vw;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.export-body {
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow: auto;
+}
+
+.export-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.export-row__label {
+  flex: 0 0 56px;
+  font-size: var(--fs-xs);
+  color: var(--text-secondary);
+}
+
+.export-row__hint {
+  font-size: var(--fs-xs);
+  color: var(--text-disabled);
+}
+
+.export-formats {
+  display: flex;
+  gap: 6px;
+}
+
+.export-formats .btn-quiet {
+  min-width: 72px;
+}
+
+.export-formats__active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.export-size {
+  width: 92px;
+  font-variant-numeric: tabular-nums;
+}
+
+.export-lock {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--fs-xs);
+  color: var(--text-secondary);
+}
+
+.export-path {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--fs-xs);
+  color: var(--text-secondary);
+  background: var(--bg-app);
+}
+
+.export-row input[type="range"] {
+  flex: 1;
+  min-width: 0;
+  accent-color: var(--accent);
+  padding: 0;
+  border: none;
+  background: transparent;
+}
+
+.export-note {
+  padding: 8px 10px;
+  border-radius: var(--radius-md);
+  background: var(--accent-soft);
+  color: var(--text-secondary);
+  font-size: var(--fs-xs);
+  line-height: 1.6;
+}
+
+.export-note--warn {
+  background: #fffaf0;
+  border: 1px solid var(--warning);
+  color: var(--text-primary);
+}
+
+.export-note--error {
+  background: #fff5f5;
+  border: 1px solid var(--danger);
+  color: var(--text-primary);
+}
+
+.export-note--ok {
+  background: #f2fbf5;
+  border: 1px solid var(--success);
+  color: var(--text-primary);
+}
+
+.export-result-path {
+  margin-top: 4px;
+  word-break: break-all;
+  color: var(--text-secondary);
+}
+
+.export-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.export-progress__bar {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--bg-hover);
+  overflow: hidden;
+}
+
+.export-progress__bar span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.2s linear;
+}
+
+.export-progress__text {
+  font-size: var(--fs-xs);
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}

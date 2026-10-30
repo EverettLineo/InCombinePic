@@ -1,35 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
-import type { DocumentState, Id, LibraryItem } from "../../domain/types";
-import { prepareThumbnail, toAssetUrl } from "../../platform/ipc";
+import type { DocumentState, LibraryItem } from "../../domain/types";
 import type { SceneSources } from "../scene/derive";
+import { getCachedSource, loadSource } from "./sourceCache";
 
 /**
  * 画布显示用的图像源。
  *
- * 分级解码的显示侧：按 2048 最长边请求位图，而不是把原图整张塞进内存。
- * 50 张 8000×6000 原图全量驻留约 9 GB（T0.8 实测单张 183 MB），
- * 显示尺寸的位图只需其零头。
+ * 真正的解码与缓存在 `sourceCache` 里，导出复用同一份缓存——
+ * 预览与导出必须看到同一批位图，否则差分验收不会过。
  */
-const DISPLAY_MAX_EDGE = 2048;
-
-const imageCache = new Map<Id, HTMLImageElement>();
-const urlCache = new Map<Id, string>();
-const inFlight = new Set<Id>();
-
-async function loadImage(url: string): Promise<HTMLImageElement> {
-  const img = new Image();
-  img.src = url;
-  await img.decode();
-  return img;
-}
-
-/** 位图像素 / 源图像素。预览图是等比降采样的，单个标量即可描述 */
-function pixelScaleOf(img: HTMLImageElement, item?: LibraryItem): number {
-  const sw = item?.width ?? 0;
-  if (sw <= 0 || img.naturalWidth <= 0) return 1;
-  return img.naturalWidth / sw;
-}
-
 export function useSceneSources(doc: DocumentState, items: LibraryItem[]): SceneSources {
   const [sources, setSources] = useState<SceneSources>({});
 
@@ -45,53 +24,25 @@ export function useSceneSources(doc: DocumentState, items: LibraryItem[]): Scene
     // 先把已缓存的直接同步进来，避免已加载过的图在重建后闪一下空白
     const immediate: SceneSources = {};
     for (const id of needed) {
-      const img = imageCache.get(id);
-      if (img) {
-        immediate[id] = {
-          image: img,
-          width: img.naturalWidth,
-          height: img.naturalHeight,
-          pixelScale: pixelScaleOf(img, items.find((i) => i.id === id)),
-        };
-      }
+      const src = getCachedSource(id, items.find((i) => i.id === id));
+      if (src) immediate[id] = src;
     }
     if (Object.keys(immediate).length > 0) {
       setSources((s) => ({ ...s, ...immediate }));
     }
 
     for (const id of needed) {
-      if (imageCache.has(id) || inFlight.has(id)) continue;
+      if (immediate[id]) continue;
       const item = items.find((i) => i.id === id);
       if (!item) continue;
 
-      inFlight.add(id);
-      void (async () => {
-        try {
-          let url = urlCache.get(id);
-          if (!url) {
-            const r = await prepareThumbnail(item.sourcePath, DISPLAY_MAX_EDGE);
-            url = toAssetUrl(r.path);
-            urlCache.set(id, url);
-          }
-          const img = await loadImage(url);
-          imageCache.set(id, img);
-          if (alive) {
-            setSources((s) => ({
-              ...s,
-              [id]: {
-                image: img,
-                width: img.naturalWidth,
-                height: img.naturalHeight,
-                pixelScale: pixelScaleOf(img, item),
-              },
-            }));
-          }
-        } catch {
-          // 单张失败不影响其余图片；该实例会保持未渲染并计入 pendingCount
-        } finally {
-          inFlight.delete(id);
-        }
-      })();
+      void loadSource(item)
+        .then((src) => {
+          if (alive) setSources((s) => ({ ...s, [id]: src }));
+        })
+        .catch(() => {
+          // 单张失败不影响其余图片；该实例保持未渲染并计入 pendingCount
+        });
     }
 
     return () => {

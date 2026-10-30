@@ -726,6 +726,74 @@ Test Files  12 passed (12)
 
 ---
 
+## TR-05L 导出链路（对应 T10.1~T10.10）
+
+### 新增模块
+
+| 文件 | 职责 | 是否纯函数 |
+| --- | --- | --- |
+| `domain/export.ts` | 条带切分、尺寸校验、默认文件名、透明口径、宽高比联动 | 是 |
+| `features/export/renderStrips.ts` | 用 Konva 渲染单条带 → PNG base64 | 否 |
+| `features/export/exportFlow.ts` | 逐条带编排、进度、取消、失败回滚 | 否 |
+| `features/export/ExportDialog.tsx` | 导出面板（格式/质量/尺寸/路径/透明说明/溢出提示/进度/结果） | 否 |
+| `state/exportStore.ts` | 导出任务状态，与文档状态完全隔离 | — |
+| `src-tauri/commands/export.rs` | 缓冲分配、条带落位、PNG/JPEG 编码、原子落盘、打开与定位 | 部分（`Job`） |
+
+### 自动化测试结果
+
+```
+前端：13 files / 226 tests passed
+Rust：22 tests passed（新增 9 项）
+```
+
+前端新增 17 项（`export`）。关键契约：
+
+| 契约 | 用例 |
+| --- | --- |
+| 条带切分：1600 一条、2048 一条、2049 两条 | 三条边界各一 |
+| 每条只多渲染 1 行重叠，且不越过画布底边 | 三条带的 `renderRows` 与总和 |
+| 20,000 px 切成 10 条 | planStrips(20000) |
+| 单边超限被拒且给出可执行说明 | 校验文案包含上限值 |
+| 总像素超 512MB 被拒 | 20000×20000 |
+| 默认文件名为 `拼图_YYYYMMDD_HHMMSS.ext` | 固定时间戳断言 |
+| 换格式时扩展名被强制纠正 | `.png` ↔ `.jpg` |
+| PNG+透明、JPEG+透明的说明不误导 | 文案断言 |
+
+Rust 新增 9 项：
+
+| 契约 | 用例 |
+| --- | --- |
+| 超过单边上限 / 总面积过大被拒 | `rejects_oversize_dimensions`、`rejects_huge_area` |
+| 条带写到正确的行偏移 | `strip_lands_at_the_right_rows` |
+| **重叠行被丢弃而非重复写入** | `overlap_rows_are_discarded_not_duplicated` |
+| 条带越界 / 数据不足被拒 | 两项 |
+| PNG 往返像素不变（含 alpha） | `png_encode_roundtrip_keeps_pixels` |
+| JPEG 头合法且 alpha 被丢弃 | `jpeg_output_is_valid_and_drops_alpha` |
+| 质量钳制到 60~100 | `quality_is_clamped_to_valid_range` |
+
+### 关键实现约束
+
+| 约束 | 原因 |
+| --- | --- |
+| 导出复用 `deriveScene` + `syncBackground` + `syncLayer` | 预览/导出同源，避免两套几何漂移（ADR-0008） |
+| 条带只写入 `rows` 行 | 重叠行写进去会让每处接缝重复一行 |
+| 重活命令声明为 `async` + `spawn_blocking` | Tauri 同步命令在主线程执行，编码会冻结窗口 |
+| 先写 `.tmp` 再 rename | 避免失败留下半张图 |
+| 成功后仅在 `revision` 未变时清 dirty | 导出期间继续编辑不应被标记为已保存 |
+| 条带用 base64 传输 | raw body 版本细节多；base64 只膨胀 33%，实现确定 |
+
+### 未测试（不得视为通过）
+
+| 项 | 原因 |
+| --- | --- |
+| PNG 导出与预览的像素差分 | 需要真实图像比对（T10.11 / KI-20） |
+| JPEG 60/92/100 三档体积与画质 | 需人工实测（KI-20） |
+| 导出中界面是否真的不卡 | 需真实交互（KI-20） |
+| PNG 无 EXIF/GPS 残留 | 需外部工具核验（KI-20） |
+| 20,000 px 实际内存与耗时 | T0.9 仍未实测 |
+
+---
+
 ## TR-06 已知问题与风险
 
 | 编号 | 问题 | 影响 | 处理 |

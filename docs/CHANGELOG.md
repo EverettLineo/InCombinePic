@@ -6,6 +6,34 @@
 
 ---
 
+## 2026-10-30 · P10 导出
+
+**新增**
+
+- `domain/export.ts`：`planStrips`（2048 行/条 + 1px 重叠）、`validateExportSize`（20,000 px 与 512MB 双限）、`defaultExportName`、`ensureExtension`、`transparencyNote`
+- `features/export/renderStrips`：用 Konva 渲染单条带（复用 `deriveScene`/`syncBackground`/`syncLayer`）
+- `features/export/exportFlow` + `state/exportStore`：逐条带编排、进度、取消、失败回滚
+- `features/export/ExportDialog`：格式/质量/尺寸/路径/透明说明/溢出提示/进度/结果操作
+- Rust `commands/export.rs`：缓冲分配、条带落位、PNG/JPEG 编码、`.tmp` + rename 原子落盘、`open_exported` / `reveal_exported` / `path_exists`
+- 顶栏「导出」入口；T9.5 的导出期溢出提示随之完成
+
+**关键设计**
+
+- 渲染留在前端：与预览共用同一套几何，一致性是结构保证而非事后对齐（ADR-0008）
+- 重活命令声明为 `async` + `spawn_blocking`，避免编码期间冻结窗口
+- 重叠行只渲染不写入，防止每处接缝重复一行
+
+**验证**
+
+- 前端用例 209 → **226 项**；Rust 13 → **22 项**
+- typecheck / lint 0 错误 0 警告
+
+**未完成**
+
+- T10.11 像素差分验收、JPEG 三档实测、元数据核验（KI-20）
+
+---
+
 ## 2026-10-30 · P9 背景、边界与溢出
 
 **新增**

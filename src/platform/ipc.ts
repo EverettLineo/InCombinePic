@@ -4,8 +4,9 @@
  */
 
 import { convertFileSrc, invoke } from "@tauri-apps/api/core";
+import type { ExportFormat } from "../domain/export";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
-import { ask, open } from "@tauri-apps/plugin-dialog";
+import { ask, open, save } from "@tauri-apps/plugin-dialog";
 
 /** 与 src-tauri/src/error.rs 的 ErrorCode 保持一致 */
 export type ErrorCode =
@@ -167,4 +168,70 @@ export async function isBenchRequested(): Promise<boolean> {
 
 export async function saveBenchAndQuit(json: string): Promise<string> {
   return invoke<string>("save_bench_and_quit", { json });
+}
+
+// ---------- 导出（T10） ----------
+
+export interface ExportFinishResult {
+  path: string;
+  bytes: number;
+  width: number;
+  height: number;
+}
+
+export async function exportBegin(
+  width: number,
+  height: number,
+  format: ExportFormat,
+  quality: number,
+): Promise<void> {
+  await invoke("export_begin", { width, height, format, quality });
+}
+
+/** 发送一条条带：base64 编码的 PNG（不含 data: 前缀） */
+export async function exportWriteStrip(
+  rowStart: number,
+  rows: number,
+  pngBase64: string,
+): Promise<void> {
+  await invoke("export_write_strip", { rowStart, rows, pngBase64 });
+}
+
+export async function exportFinish(path: string): Promise<ExportFinishResult> {
+  return invoke<ExportFinishResult>("export_finish", { path });
+}
+
+export async function exportAbort(): Promise<void> {
+  await invoke("export_abort");
+}
+
+export async function pathExists(path: string): Promise<boolean> {
+  return invoke<boolean>("path_exists", { path });
+}
+
+export async function openExported(path: string): Promise<void> {
+  await invoke("open_exported", { path });
+}
+
+export async function revealExported(path: string): Promise<void> {
+  await invoke("reveal_exported", { path });
+}
+
+/** 保存对话框：返回用户选定的路径，取消则返回 null */
+export async function pickSavePath(
+  defaultName: string,
+  format: ExportFormat,
+): Promise<string | null> {
+  const ext = format === "png" ? "png" : "jpg";
+  const result = await save({
+    title: "导出拼图",
+    defaultPath: defaultName,
+    filters: [
+      {
+        name: format === "png" ? "PNG 图片" : "JPEG 图片",
+        extensions: [ext],
+      },
+    ],
+  });
+  return result ?? null;
 }

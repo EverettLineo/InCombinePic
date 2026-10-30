@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { CanvasArea } from "../features/canvas/CanvasArea";
 import { CropEditor } from "../features/crop/CropEditor";
+import { ExportDialog } from "../features/export/ExportDialog";
 import { ImagePicker } from "../features/templates/ImagePicker";
 import { BenchScreen } from "../features/scene/BenchScreen";
 import { LeftPanel } from "./LeftPanel";
@@ -13,6 +14,7 @@ import {
   type AppInfo,
 } from "../platform/ipc";
 import { useDocStore } from "../state/docStore";
+import { useViewStore } from "../state/viewStore";
 import { ErrorBoundary } from "../ui/ErrorBoundary";
 import { useUndoShortcuts } from "./useUndoShortcuts";
 import { nextUndoLabel } from "../domain/history";
@@ -73,6 +75,13 @@ export default function App() {
         {dirty ? <span className="header__meta">· 有未导出修改</span> : null}
         <span className="header__spacer" />
         {info?.offline ? <span className="badge">本地处理 · 离线可用</span> : null}
+        <button
+          className="btn-primary header__export"
+          onClick={() => useViewStore.getState().openExport()}
+          title="导出为 PNG / JPEG"
+        >
+          导出
+        </button>
       </header>
 
       <div className="body">
@@ -87,6 +96,7 @@ export default function App() {
 
       <CropEditor />
       <ImagePicker />
+      <ExportDialog />
 
       {error ? (
         <div className="error-box">

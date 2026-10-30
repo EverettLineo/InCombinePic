@@ -22,6 +22,10 @@ export interface ViewStore extends ViewState {
   cropEditor: Id | null;
   openCropEditor: (id: Id) => void;
   closeCropEditor: () => void;
+  /** 导出面板是否打开 */
+  exportOpen: boolean;
+  openExport: () => void;
+  closeExport: () => void;
   /** 选图弹窗的目标；null 表示未打开。纯界面状态 */
   picker: PickerTarget | null;
   openCellPicker: (cellIndex: number) => void;
@@ -47,12 +51,15 @@ export const useViewStore = create<ViewStore>((set, get) => ({
   ...initial,
   cropEditor: null,
   picker: null,
+  exportOpen: false,
 
   openCropEditor: (id) => set({ cropEditor: id }),
   closeCropEditor: () => set({ cropEditor: null }),
   openCellPicker: (cellIndex) => set({ picker: { kind: "cell", cellIndex } }),
   openReplacePicker: (instanceId) => set({ picker: { kind: "replace", instanceId } }),
   closePicker: () => set({ picker: null }),
+  openExport: () => set({ exportOpen: true }),
+  closeExport: () => set({ exportOpen: false }),
 
   setZoom: (zoom) => set({ zoom: clamp(zoom, MIN_ZOOM, MAX_ZOOM) }),
 
