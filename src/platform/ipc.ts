@@ -265,3 +265,25 @@ export async function onCloseRequested(
 export async function destroyWindow(): Promise<void> {
   await getCurrentWindow().destroy();
 }
+
+// ---------- 导出源（同源位图，T10.12 修复 canvas 污染） ----------
+
+/**
+ * 读取图片并编码为 PNG 字节（Rust 侧已按 EXIF 方向转正、按最长边缩放）。
+ *
+ * 为什么不用 asset 协议：`asset.localhost` 与页面不同源，加载的位图会**污染 canvas**，
+ * 导出时 `canvas.toBlob` 直接抛 "Tainted canvases may not be exported"。
+ * 这里拿字节后用 `Blob` + `URL.createObjectURL` 生成 `blob:` URL，属同源资源。
+ */
+export async function readImagePng(
+  path: string,
+  maxEdge: number,
+): Promise<Uint8Array<ArrayBuffer>> {
+  const buf = await invoke<ArrayBuffer>("read_image_png", { path, maxEdge });
+  return new Uint8Array(buf);
+}
+
+/** 打开作者主页（Rust 侧固定白名单，不接受任意 URL） */
+export async function openAuthorLink(which: "github" | "site"): Promise<void> {
+  await invoke("open_author_link", { which });
+}

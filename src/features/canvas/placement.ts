@@ -5,9 +5,15 @@
  * 放置属于可撤销的画布编辑（基线 §11.2），因此走 docStore.commit。
  */
 
-import { addInstance, createInstance, makeInstanceId } from "../../domain/document";
-import { centerFitFrame, gridFrames } from "../../domain/layout";
-import { emptyCellIndices, findTemplate, placeIntoCell } from "../../domain/templates";
+import { addInstance, createInstance, hitTest, makeInstanceId } from "../../domain/document";
+import { cascadeFrame, gridFrames } from "../../domain/layout";
+import {
+  emptyCellIndices,
+  findTemplate,
+  placeIntoCell,
+  replaceInstanceSource,
+  templateFrames,
+} from "../../domain/templates";
 import type { LibraryItem } from "../../domain/types";
 import { useDocStore } from "../../state/docStore";
 import { useLibraryStore } from "../../state/libraryStore";
@@ -36,9 +42,12 @@ export function placeItem(item: LibraryItem): string | null {
       }
     }
 
-    const frame = centerFitFrame(
+    // 已有内容时缩到 70% 并斜向错开：否则新图会完全盖在旧图下面，
+    // 用户双击后什么都看不到，会以为双击没生效（2026-10-31 反馈）
+    const frame = cascadeFrame(
       { width: item.width, height: item.height },
       { width: doc.canvas.width, height: doc.canvas.height },
+      doc.instances.map((i) => i.frame),
     );
     if (frame.w <= 0 || frame.h <= 0) return doc;
 
@@ -91,4 +100,72 @@ export function placeAllItems(): number {
   });
 
   return added;
+}
+
+let dropSeq = 0;
+function nextDropId(): string {
+  dropSeq += 1;
+  return `drop-${Date.now().toString(36)}-${dropSeq}`;
+}
+
+/** 拖放放置时，图片相对画布宽度的默认占比 */
+const DROP_WIDTH_RATIO = 0.4;
+
+/**
+ * 拖拽投放（资源库 → 画布）。落点决定行为，三档优先级：
+ *
+ * 1. **模板空格**：落点在某个空白单元格内 → 填入该格（用户意图明确，最高优先）；
+ * 2. **已有实例**：落点压在某张图上 → 替换它的图片（位置/边框/圆角保留，裁剪重置）；
+ * 3. **空白处**：以落点为中心按比例放置，并夹回画布内。
+ *
+ * 返回是否真的发生了编辑，供调用方决定是否给出提示。
+ */
+export function dropItemAt(item: LibraryItem, x: number, y: number): boolean {
+  const { commit } = useDocStore.getState();
+  let placed = false;
+
+  commit((doc) => {
+    const src = { itemId: item.id, width: item.width, height: item.height };
+    const template = findTemplate(doc.templateId);
+
+    if (template) {
+      const frames = templateFrames(template, doc.canvas, doc.gap);
+      const cell = emptyCellIndices(doc, template).find((i) => {
+        const f = frames[i];
+        return x >= f.x && x <= f.x + f.w && y >= f.y && y <= f.y + f.h;
+      });
+      if (cell !== undefined) {
+        placed = true;
+        return placeIntoCell(doc, template, cell, src, makeInstanceId(cell));
+      }
+    }
+
+    const hit = hitTest(doc, x, y);
+    if (hit) {
+      placed = true;
+      return replaceInstanceSource(doc, hit, src);
+    }
+
+    // 空白处：按比例放置，宽度取画布宽度的 40%，再按图片宽高比算高度
+    const w = Math.max(24, Math.round(doc.canvas.width * DROP_WIDTH_RATIO));
+    const h = Math.max(24, Math.round((w * item.height) / Math.max(1, item.width)));
+    const frame = {
+      x: Math.round(x - w / 2),
+      y: Math.round(y - h / 2),
+      w,
+      h,
+    };
+    placed = true;
+    const instance = createInstance(doc, {
+      // 独立前缀 + 自增：避免与模板/双击路径的 id 规则撞车
+      id: nextDropId(),
+      libraryItemId: item.id,
+      sourceWidth: item.width,
+      sourceHeight: item.height,
+      frame,
+    });
+    return addInstance(doc, instance);
+  });
+
+  return placed;
 }

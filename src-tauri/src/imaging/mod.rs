@@ -246,6 +246,40 @@ pub fn decode_oriented(path: &Path) -> Result<image::DynamicImage, AppError> {
     Ok(apply_orientation(img, read_orientation(path)))
 }
 
+/// 解码并编码为 PNG 字节，可按最长边缩放。
+///
+/// 用途：把位图以 `blob:` 形式交给前端渲染。**不能用 asset 协议**——
+/// `asset.localhost` 与页面不同源，用它加载的位图会污染 canvas，
+/// 导出时 `canvas.toBlob` 会直接抛 "Tainted canvases may not be exported"
+/// （2026-10-31 实测于导出流程）。
+///
+/// 选 PNG 而不是 JPEG：导出源必须是**无损**的，否则 JPEG 输出会经历两次有损编码。
+pub fn png_bytes(path: &Path, max_edge: u32) -> Result<(Vec<u8>, u32, u32), AppError> {
+    let img = decode_oriented(path)?;
+    let (w, h) = (img.width(), img.height());
+    if w == 0 || h == 0 {
+        return Err(AppError::new(ErrorCode::DecodeFailed, "图片尺寸为空"));
+    }
+
+    let limit = max_edge.max(16);
+    let scale = (limit as f64 / w.max(h) as f64).min(1.0);
+    // 原图比目标小就不放大，避免无意义插值
+    let target = if scale >= 1.0 {
+        img
+    } else {
+        let dw = ((w as f64 * scale).round() as u32).max(1);
+        let dh = ((h as f64 * scale).round() as u32).max(1);
+        img.resize_exact(dw, dh, image::imageops::FilterType::Lanczos3)
+    };
+
+    let (tw, th) = (target.width(), target.height());
+    let mut out: Vec<u8> = Vec::new();
+    target
+        .write_to(&mut std::io::Cursor::new(&mut out), image::ImageFormat::Png)
+        .map_err(|e| AppError::new(ErrorCode::Internal, format!("PNG 编码失败：{e}")))?;
+    Ok((out, tw, th))
+}
+
 /// 生成缩略图到指定路径，返回实际尺寸。
 ///
 /// 这是"分级解码"的落地：画布与列表只需要显示尺寸的像素，
@@ -456,6 +490,32 @@ mod tests {
 
         let (w, h) = make_thumbnail(&src, &dst, 256).unwrap();
         assert_eq!((w, h), (64, 48), "小图不应被放大");
+    }
+
+    #[test]
+    fn png_bytes_scales_and_stays_decodable() {
+        // 导出源的新通道：字节必须能被前端解码，且按 max_edge 等比缩放
+        let d = tmpdir("pngbytes");
+        let p = write_png(&d, "src.png", 400, 200);
+        let (bytes, w, h) = png_bytes(std::path::Path::new(&p), 100).unwrap();
+        assert_eq!((w, h), (100, 50));
+        assert!(!bytes.is_empty());
+        let decoded = image::load_from_memory(&bytes).unwrap();
+        assert_eq!((decoded.width(), decoded.height()), (100, 50));
+    }
+
+    #[test]
+    fn png_bytes_does_not_upscale() {
+        let d = tmpdir("pngbytes2");
+        let p = write_png(&d, "small.png", 64, 48);
+        let (_, w, h) = png_bytes(std::path::Path::new(&p), 256).unwrap();
+        assert_eq!((w, h), (64, 48), "原图小于目标尺寸时不应放大");
+    }
+
+    #[test]
+    fn png_bytes_reports_error_for_missing_file() {
+        let r = png_bytes(std::path::Path::new("C:/__not_exists__.png"), 64);
+        assert!(r.is_err(), "缺失文件必须返回错误，而不是空字节");
     }
 
     #[test]

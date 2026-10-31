@@ -10,7 +10,7 @@
 
 | # | 基线要求 | 交付物 | 状态 |
 | --- | --- | --- | --- |
-| 1 | Windows 正式安装程序 | `src-tauri/target/release/bundle/nsis/拼图工具_0.1.0_x64-setup.exe`（2.21 MiB） | **已产出**，安装/卸载未验证 |
+| 1 | Windows 正式安装程序 | `src-tauri/target/release/bundle/nsis/In拼图_0.1.0_x64-setup.exe`（2.23 MiB） | **已产出**，安装/卸载未验证 |
 | 2 | 完整、可读、可构建的源码 | 本仓库（git，含全部源码与测试） | 完成 |
 | 3 | README 与开发环境搭建说明 | [`README.md`](../README.md)「环境要求」「开发」 | 完成 |
 | 4 | 运行、调试、测试、构建与打包说明 | [`README.md`](../README.md)「校验」「构建与打包」「压力测试」 | 完成 |
@@ -35,7 +35,7 @@
 | --- | --- |
 | 构建命令 | `npx tauri build`（`bundle.targets = ["nsis"]`） |
 | 构建耗时 | 4 分 53 秒（含前端 0.9 s） |
-| 安装包 | `拼图工具_0.1.0_x64-setup.exe`，**2.21 MiB** |
+| 安装包 | `In拼图_0.1.0_x64-setup.exe`，**2.23 MiB** |
 | 可执行文件 | `pintu.exe`，**7.4 MiB** |
 | 构建后启动 | 已实测：进程存活，工作集 27 MB，无崩溃 |
 | 干净环境安装 | **未验证**（需要一台未装过本应用的机器或虚拟机） |

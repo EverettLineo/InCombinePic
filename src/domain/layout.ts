@@ -5,6 +5,7 @@
  * 保证"首次排布"和"后来添加"用的是同一套可预测规则（基线 §7.1、§7.2）。
  */
 
+import { clamp } from "./document";
 import type { Frame } from "./types";
 
 export interface Box {
@@ -95,4 +96,60 @@ export function gridFrames(
       h,
     };
   });
+}
+
+/**
+ * 级联放置：已有内容时，把新图缩小并按固定步长错开，直到不与已有实例大面积重叠。
+ *
+ * 为什么需要：原来的"居中适配"在画布已有内容时会把新图**完全盖在旧图下面**，
+ * 用户双击后看不到任何变化，会认为双击失效（2026-10-31 反馈）。
+ *
+ * 判定用"重叠面积 / 较小者面积"，而不是绝对面积：一张大图和一张小图重叠 5% 与
+ * 两张小图重叠 5% 的观感差别很大，比值才稳定。
+ */
+export function cascadeFrame(
+  size: { width: number; height: number },
+  canvas: { width: number; height: number },
+  existing: readonly Frame[],
+  opts: { scale?: number; step?: number; maxTries?: number; maxOverlap?: number } = {},
+): Frame {
+  const scale = opts.scale ?? 0.7;
+  const step = opts.step ?? 32;
+  const maxTries = opts.maxTries ?? 24;
+  const maxOverlap = opts.maxOverlap ?? 0.15;
+
+  const base = centerFitFrame(size, canvas);
+  if (base.w <= 0 || base.h <= 0) return base;
+  // 空画布就该铺满：缩小与错开只在"已经有内容"时才有意义
+  if (existing.length === 0) return base;
+
+  const w = Math.max(8, Math.round(base.w * scale));
+  const h = Math.max(8, Math.round(base.h * scale));
+  const startX = Math.round((canvas.width - w) / 2);
+  const startY = Math.round((canvas.height - h) / 2);
+
+  let best: Frame = { x: startX, y: startY, w, h };
+  let bestRatio = Infinity;
+
+  for (let i = 0; i < maxTries; i++) {
+    // 斜向右下错开；每一步都夹回画布内，避免跑到边界外
+    const x = clamp(startX + i * step, 0, Math.max(0, canvas.width - w));
+    const y = clamp(startY + i * step, 0, Math.max(0, canvas.height - h));
+    const f: Frame = { x, y, w, h };
+
+    let worst = 0;
+    for (const e of existing) {
+      const ow = Math.min(f.x + f.w, e.x + e.w) - Math.max(f.x, e.x);
+      const oh = Math.min(f.y + f.h, e.y + e.h) - Math.max(f.y, e.y);
+      if (ow <= 0 || oh <= 0) continue;
+      const ratio = (ow * oh) / Math.min(f.w * f.h, Math.max(1, e.w * e.h));
+      worst = Math.max(worst, ratio);
+    }
+    if (worst < bestRatio) {
+      bestRatio = worst;
+      best = f;
+    }
+    if (worst <= maxOverlap) return f;
+  }
+  return best;
 }

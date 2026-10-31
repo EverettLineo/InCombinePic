@@ -9,6 +9,7 @@ import type { LibraryItem } from "../../domain/types";
 import { askUser, normalizeError } from "../../platform/ipc";
 import { useDocStore } from "../../state/docStore";
 import { useLibraryStore } from "../../state/libraryStore";
+import { dropOnCanvas, isInside } from "../canvas/dropTarget";
 import { placeItem } from "../canvas/placement";
 import { Thumbnail } from "../../ui/Thumbnail";
 import { useImportController } from "./useImportController";
@@ -51,6 +52,9 @@ export function LibraryPanel() {
   });
   /** 拖动结束后要吞掉随之而来的 click，避免误触预览 */
   const suppressClickRef = useRef(false);
+  const listRef = useRef<HTMLUListElement | null>(null);
+  /** 拖到画布方向的浮标；仅在指针离开资源库时显示 */
+  const [ghost, setGhost] = useState<{ name: string; x: number; y: number } | null>(null);
 
   const sorted = getSorted();
 
@@ -107,34 +111,49 @@ export function LibraryPanel() {
    * 会屏蔽页面内的 HTML5 拖拽事件，两者不能共存。文件拖入是基线硬需求，
    * 所以排序改为自己处理 pointerdown/move/up。
    */
-  function beginReorder(e: React.PointerEvent<HTMLLIElement>, index: number) {
+  function beginDrag(e: React.PointerEvent<HTMLLIElement>, index: number) {
     if (e.button !== 0) return;
+    const startX = e.clientX;
     const startY = e.clientY;
+    const item = sorted[index];
     dragRef.current = { from: index, active: false, over: null };
 
     const onMove = (ev: PointerEvent) => {
       if (!dragRef.current.active) {
-        // 4px 死区：区分"点击查看预览"和"拖动排序"
-        if (Math.abs(ev.clientY - startY) < 4) return;
+        // 4px 死区：区分"点击查看预览"和"拖动"
+        if (Math.abs(ev.clientX - startX) < 4 && Math.abs(ev.clientY - startY) < 4) return;
         dragRef.current.active = true;
       }
+
+      const inList = isInside(listRef.current, ev.clientX, ev.clientY);
+      // 离开列表 = 打算投到画布：此时不再高亮排序落点，改为显示浮标
+      setGhost(inList ? null : { name: item.fileName, x: ev.clientX, y: ev.clientY });
+
       const el = document.elementFromPoint(ev.clientX, ev.clientY) as HTMLElement | null;
       const row = el?.closest("li[data-lib-index]") as HTMLElement | null;
-      const over = row ? Number(row.dataset.libIndex) : null;
+      const over = inList && row ? Number(row.dataset.libIndex) : null;
       dragRef.current.over = over;
       setDragOver(over);
     };
 
-    const onUp = () => {
+    const onUp = (ev: PointerEvent) => {
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerup", onUp);
       const { from, active, over } = dragRef.current;
+      const inList = isInside(listRef.current, ev.clientX, ev.clientY);
+
       if (active) {
         suppressClickRef.current = true;
-        if (over !== null && over !== from) moveItem(from, over);
+        if (inList) {
+          if (over !== null && over !== from) moveItem(from, over);
+        } else {
+          // 投到画布：空格 → 填入；压在图上 → 替换；空白 → 按落点放置
+          dropOnCanvas(item.id, ev.clientX, ev.clientY);
+        }
       }
       dragRef.current = { from: -1, active: false, over: null };
       setDragOver(null);
+      setGhost(null);
     };
 
     window.addEventListener("pointermove", onMove);
@@ -171,7 +190,7 @@ export function LibraryPanel() {
       <div className="lib-hint">
         {items.length === 0
           ? "支持 PNG / JPG / WebP / BMP，可拖入文件或按 Ctrl+V 粘贴"
-          : `共 ${items.length} 项 · 双击放入画布 · 拖拽调整顺序`}
+          : `共 ${items.length} 项 · 双击放入画布 · 拖到画布可放入/替换 · 列表内拖动排序`}
       </div>
 
       {error ? (
@@ -222,7 +241,7 @@ export function LibraryPanel() {
         {sorted.length === 0 ? (
           <div className="empty-hint">尚未导入图片</div>
         ) : (
-          <ul className="lib-list">
+          <ul className="lib-list" ref={listRef}>
             {sorted.map((it, idx) => (
               <li
                 className={`lib-item${preview?.id === it.id ? " lib-item--active" : ""}${
@@ -230,7 +249,7 @@ export function LibraryPanel() {
                 }`}
                 key={it.id}
                 data-lib-index={idx}
-                onPointerDown={(e) => beginReorder(e, idx)}
+                onPointerDown={(e) => beginDrag(e, idx)}
                 onClick={() => {
                   if (suppressClickRef.current) {
                     suppressClickRef.current = false;
@@ -243,7 +262,7 @@ export function LibraryPanel() {
                   setPreview(null);
                   placeItem(it);
                 }}
-                title="点击查看较大预览，双击放入画布，按住拖动可调整顺序"
+                title="点击查看较大预览；双击放入画布；拖到画布可放入或替换；在列表内拖动可调整顺序"
               >
                 <span className="lib-item__index">{idx + 1}</span>
                 <Thumbnail path={it.sourcePath} alt={it.fileName} className="lib-item__thumb" />
@@ -294,6 +313,12 @@ export function LibraryPanel() {
               />
             </div>
           </div>
+        </div>
+      ) : null}
+
+      {ghost ? (
+        <div className="lib-ghost" style={{ left: ghost.x + 14, top: ghost.y + 14 }}>
+          {ghost.name}
         </div>
       ) : null}
     </>

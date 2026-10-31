@@ -8,7 +8,8 @@ import { useLibraryStore } from "../../state/libraryStore";
 import { useViewStore } from "../../state/viewStore";
 import { KonvaStage } from "../scene/KonvaStage";
 import { deriveScene } from "../scene/derive";
-import { placeAllItems } from "./placement";
+import { registerCanvasDropTarget } from "./dropTarget";
+import { dropItemAt, placeAllItems } from "./placement";
 import { useSceneSources } from "./useSceneSources";
 
 /** 吸附阈值（屏幕像素）：折算到画布坐标后，不同缩放下的手感一致 */
@@ -60,6 +61,22 @@ export function CanvasArea() {
     fitToViewport(doc.canvas.width, doc.canvas.height, size.w, size.h);
     fittedRef.current = true;
   }, [size.w, size.h, doc.canvas.width, doc.canvas.height, fitToViewport]);
+
+  // 资源库拖拽投放：把屏幕坐标换算成画布坐标后交给放置逻辑
+  useEffect(() => {
+    registerCanvasDropTarget((itemId, clientX, clientY) => {
+      const host = hostRef.current;
+      const item = useLibraryStore.getState().findById(itemId);
+      if (!host || !item) return false;
+      const r = host.getBoundingClientRect();
+      const v = useViewStore.getState();
+      const zoom = v.zoom || 1;
+      const x = (clientX - r.left - v.panX) / zoom;
+      const y = (clientY - r.top - v.panY) / zoom;
+      return dropItemAt(item, x, y);
+    });
+    return () => registerCanvasDropTarget(null);
+  }, []);
 
   // 实例被删除（或释放资源级联删除）后，清理指向它的选中
   useEffect(() => {
@@ -232,7 +249,7 @@ export function CanvasArea() {
           <div className="canvas-empty__hint">
             {items.length === 0
               ? "先从左侧导入图片"
-              : "双击左侧图片放到画布，或点击「全部添加」"}
+              : "双击或拖拽左侧图片到画布，也可点「全部添加」"}
           </div>
         </div>
       )}

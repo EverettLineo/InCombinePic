@@ -34,6 +34,13 @@ export interface SceneNode {
   cornerRadius: number;
   /** 全局适配模式：fill 裁切填满，contain 完整显示（T8.7） */
   fitMode: FitMode;
+  /**
+   * 模板模式下该实例所属的单元格（画布坐标）。
+   *
+   * 渲染层据此把实例裁进单元格：否则放大/拖动的图片会盖住相邻格，
+   * 用户看到的是"图压到别人身上"（2026-10-31 反馈）。
+   */
+  cell?: Frame;
   /** 图像尚未加载完成时为 undefined，渲染层应跳过该节点而不是画错位置 */
   source?: SceneImage;
 }
@@ -49,6 +56,19 @@ export interface SceneDescriptor {
 }
 
 export function deriveScene(doc: DocumentState, sources: SceneSources): SceneDescriptor {
+  const template = findTemplate(doc.templateId);
+  const cellFrames = template ? templateFrames(template, doc.canvas, doc.gap) : [];
+
+  /** 按实例中心判定所属单元格；中心不在任何格内则视为"已移出模板" */
+  function cellOf(frame: Frame): Frame | undefined {
+    if (cellFrames.length === 0) return undefined;
+    const cx = frame.x + frame.w / 2;
+    const cy = frame.y + frame.h / 2;
+    return cellFrames.find(
+      (f) => cx >= f.x && cx <= f.x + f.w && cy >= f.y && cy <= f.y + f.h,
+    );
+  }
+
   let pendingCount = 0;
   const nodes: SceneNode[] = doc.instances.map((it) => {
     const source = sources[it.libraryItemId];
@@ -65,11 +85,11 @@ export function deriveScene(doc: DocumentState, sources: SceneSources): SceneDes
       border: it.border,
       cornerRadius: it.cornerRadius,
       fitMode: doc.fitMode,
+      cell: cellOf(it.frame),
       source,
     };
   });
 
-  const template = findTemplate(doc.templateId);
   const emptyCells = template
     ? (() => {
         const frames = templateFrames(template, doc.canvas, doc.gap);

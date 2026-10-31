@@ -16,7 +16,7 @@ import {
 import { useDocStore } from "../../state/docStore";
 import { useExportStore } from "../../state/exportStore";
 import { useLibraryStore } from "../../state/libraryStore";
-import { ensureSources } from "../canvas/sourceCache";
+import { loadExportSources } from "../canvas/sourceCache";
 import { renderStripBase64 } from "./renderStrips";
 
 export interface ExportRequest {
@@ -44,10 +44,14 @@ export async function runExport(req: ExportRequest): Promise<void> {
   }
   store.begin(strips.length);
 
+  let prep: Awaited<ReturnType<typeof loadExportSources>> | null = null;
   try {
-    // 用到的资源先全部解码，避免渲染中途才发现某张图没加载
-    const needed = new Set(doc.instances.map((i) => i.libraryItemId));
-    const sources = await ensureSources(items.filter((i) => needed.has(i.id)));
+    // 导出源与预览源不同：走同源 blob（避免 canvas 污染），分辨率按输出尺寸算
+    prep = await loadExportSources(doc, items, req.width, req.height);
+    if (prep.failed.length > 0) {
+      throw new Error(`有 ${prep.failed.length} 张图片无法读取，已取消导出`);
+    }
+    const sources = prep.sources;
 
     const bgType = doc.canvas.background.type;
     const skipBackground = req.format === "png" && bgType === "transparent";
@@ -86,5 +90,8 @@ export async function runExport(req: ExportRequest): Promise<void> {
   } catch (e) {
     await exportAbort().catch(() => undefined);
     useExportStore.getState().fail(normalizeError(e));
+  } finally {
+    // 导出用的原图位图动辄几十 MB，用完必须放掉
+    prep?.release();
   }
 }

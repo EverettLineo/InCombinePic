@@ -36,7 +36,8 @@ export function useAppShortcuts() {
 
       const view = useViewStore.getState();
       const docStore = useDocStore.getState();
-      const modalOpen = Boolean(view.cropEditor) || Boolean(view.picker) || view.exportOpen;
+      const modalOpen =
+        Boolean(view.cropEditor) || Boolean(view.picker) || view.exportOpen || view.aboutOpen;
 
       if (e.key === "Escape") {
         e.preventDefault();
@@ -47,6 +48,10 @@ export function useAppShortcuts() {
         }
         if (view.picker) {
           view.closePicker();
+          return;
+        }
+        if (view.aboutOpen) {
+          view.closeAbout();
           return;
         }
         if (view.exportOpen) {

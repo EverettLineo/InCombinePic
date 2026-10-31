@@ -25,6 +25,10 @@ export interface ViewStore extends ViewState {
   cropEditor: Id | null;
   openCropEditor: (id: Id) => void;
   closeCropEditor: () => void;
+  /** 关于面板是否打开 */
+  aboutOpen: boolean;
+  openAbout: () => void;
+  closeAbout: () => void;
   /** 导出面板是否打开 */
   exportOpen: boolean;
   openExport: () => void;
@@ -64,6 +68,7 @@ export const useViewStore = create<ViewStore>((set, get) => ({
   cropEditor: null,
   picker: null,
   exportOpen: false,
+  aboutOpen: false,
   leftTab: "library" as LeftTab,
   rightTab: "props" as RightTab,
   pendingImport: false,
@@ -75,6 +80,8 @@ export const useViewStore = create<ViewStore>((set, get) => ({
   closePicker: () => set({ picker: null }),
   openExport: () => set({ exportOpen: true }),
   closeExport: () => set({ exportOpen: false }),
+  openAbout: () => set({ aboutOpen: true }),
+  closeAbout: () => set({ aboutOpen: false }),
 
   setLeftTab: (tab) => set({ leftTab: tab }),
   setRightTab: (tab) => set({ rightTab: tab }),

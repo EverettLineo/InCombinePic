@@ -1341,3 +1341,130 @@ input:focus {
   color: var(--text-secondary);
   font-variant-numeric: tabular-nums;
 }
+
+/* ---------- 关于面板 ---------- */
+
+.header__about {
+  padding: 3px 10px;
+}
+
+.about-dialog {
+  width: 460px;
+  max-width: 92vw;
+  background: var(--bg-panel);
+  border-radius: var(--radius-md);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.28);
+  display: flex;
+  flex-direction: column;
+}
+
+.about-dialog__head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.about-dialog__logo {
+  flex: 0 0 42px;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--accent), #6ea8f0);
+  color: var(--text-inverse);
+  font-size: 18px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  letter-spacing: -0.5px;
+}
+
+.about-dialog__name {
+  font-size: var(--fs-md);
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.about-dialog__sub {
+  margin-top: 2px;
+  font-size: var(--fs-xs);
+  color: var(--text-secondary);
+}
+
+.about-dialog__body {
+  padding: 14px 18px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.about-facts {
+  display: grid;
+  grid-template-columns: 48px 1fr;
+  gap: 8px 12px;
+  margin: 0;
+  font-size: var(--fs-sm);
+}
+
+.about-facts dt {
+  color: var(--text-secondary);
+  font-size: var(--fs-xs);
+  line-height: 20px;
+}
+
+.about-facts dd {
+  margin: 0;
+  color: var(--text-primary);
+  line-height: 20px;
+  word-break: break-all;
+}
+
+.about-link {
+  border: none;
+  background: transparent;
+  padding: 0;
+  color: var(--accent);
+  font-size: var(--fs-sm);
+  cursor: pointer;
+  text-align: left;
+}
+
+.about-link:hover {
+  text-decoration: underline;
+}
+
+.about-dialog__note {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: var(--radius-md);
+  background: var(--bg-app);
+  color: var(--text-secondary);
+  font-size: var(--fs-xs);
+  line-height: 1.7;
+}
+
+.about-dialog__error {
+  margin: 0;
+  color: var(--danger);
+  font-size: var(--fs-xs);
+}
+
+/* 拖到画布时的浮标 */
+.lib-ghost {
+  position: fixed;
+  z-index: 60;
+  pointer-events: none;
+  max-width: 220px;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-panel);
+  border: 1px solid var(--accent);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
+  font-size: var(--fs-xs);
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

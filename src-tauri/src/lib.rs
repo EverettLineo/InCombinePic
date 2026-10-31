@@ -15,8 +15,10 @@ pub fn run() {
         // 写成 commands::<模块> 会报 E0433。
         .invoke_handler(tauri::generate_handler![
             commands::app_info::app_info,
+            commands::app_info::open_author_link,
             commands::import::probe_files,
             commands::import::prepare_thumbnail,
+            commands::import::read_image_png,
             commands::clipboard::read_clipboard_image,
             commands::bench::bench_requested,
             commands::bench::save_bench_and_quit,

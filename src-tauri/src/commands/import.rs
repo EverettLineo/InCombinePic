@@ -1,5 +1,5 @@
 use crate::error::{AppError, ErrorCode};
-use crate::imaging::{make_thumbnail, probe_many, ProbeOutcome};
+use crate::imaging::{make_thumbnail, png_bytes, probe_many, ProbeOutcome};
 use serde::Serialize;
 use std::collections::hash_map::DefaultHasher;
 use std::fs;
@@ -91,4 +91,21 @@ pub async fn prepare_thumbnail(
     })
     .await
     .map_err(|e| AppError::new(ErrorCode::Internal, format!("缩略图任务异常：{e}")))?
+}
+
+/// 读取图片并按最长边缩放后编码为 PNG，返回原始字节。
+///
+/// 前端用 `new Blob([bytes])` + `URL.createObjectURL` 得到同源位图：
+/// asset 协议是跨源的，会污染 canvas 导致导出失败（详见 `imaging::png_bytes`）。
+///
+/// `max_edge` 由调用方按"该图在输出中占多少像素"决定，而不是固定值——
+/// 预览用 2048 够了，导出必须按实际显示尺寸取，否则大画布会糊。
+#[tauri::command]
+pub async fn read_image_png(path: String, max_edge: u32) -> Result<tauri::ipc::Response, AppError> {
+    let bytes = tauri::async_runtime::spawn_blocking(move || {
+        png_bytes(std::path::Path::new(&path), max_edge).map(|(b, _, _)| b)
+    })
+    .await
+    .map_err(|e| AppError::new(ErrorCode::Internal, format!("读取图片任务异常：{e}")))??;
+    Ok(tauri::ipc::Response::new(bytes))
 }

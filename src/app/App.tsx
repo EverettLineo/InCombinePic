@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { CanvasArea } from "../features/canvas/CanvasArea";
 import { CropEditor } from "../features/crop/CropEditor";
+import { AboutDialog } from "../features/about/AboutDialog";
 import { ExportDialog } from "../features/export/ExportDialog";
 import { ImagePicker } from "../features/templates/ImagePicker";
 import { BenchScreen } from "../features/scene/BenchScreen";
@@ -85,6 +86,13 @@ export default function App() {
         <span className="header__spacer" />
         {info?.offline ? <span className="badge">本地处理 · 离线可用</span> : null}
         <button
+          className="btn-quiet header__about"
+          onClick={() => useViewStore.getState().openAbout()}
+          title="应用信息与作者"
+        >
+          关于
+        </button>
+        <button
           className="btn-primary header__export"
           onClick={() => useViewStore.getState().openExport()}
           title="导出为 PNG / JPEG"
@@ -106,6 +114,7 @@ export default function App() {
       <CropEditor />
       <ImagePicker />
       <ExportDialog />
+      <AboutDialog version={info?.version ?? ""} />
 
       {error ? (
         <div className="error-box">

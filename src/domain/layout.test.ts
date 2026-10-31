@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { centerFitFrame, gridFrames } from "./layout";
+import { cascadeFrame, centerFitFrame, gridFrames } from "./layout";
 
 const canvas = { width: 2400, height: 1600 };
 
@@ -70,5 +70,51 @@ describe("gridFrames", () => {
     const frames = gridFrames(items, canvas, 20);
     expect(frames[0].w / frames[0].h).toBeCloseTo(2, 1);
     expect(frames[1].w / frames[1].h).toBeCloseTo(0.5, 1);
+  });
+});
+
+describe("cascadeFrame（双击/拖放的避让放置）", () => {
+  it("空画布时等同于居中适配（按画布 60% 放，不额外缩小）", () => {
+    const f = cascadeFrame({ width: 2000, height: 1000 }, { width: 2400, height: 1600 }, []);
+    // centerFitFrame 的默认 maxRatio 是 0.6：宽度取 2400 × 0.6 = 1440
+    expect(f.w).toBe(1440);
+    expect(f.h).toBe(720);
+    expect(f.x).toBe(480);
+    expect(f.y).toBe(440);
+  });
+
+  it("已有居中实例时，新图错开且重叠显著减少", () => {
+    const canvas = { width: 2400, height: 1600 };
+    const size = { width: 2000, height: 1000 };
+    const first = cascadeFrame(size, canvas, []);
+    const second = cascadeFrame(size, canvas, [first]);
+
+    expect(second).not.toEqual(first);
+    // 必须仍完整落在画布内
+    expect(second.x).toBeGreaterThanOrEqual(0);
+    expect(second.y).toBeGreaterThanOrEqual(0);
+    expect(second.x + second.w).toBeLessThanOrEqual(canvas.width);
+    expect(second.y + second.h).toBeLessThanOrEqual(canvas.height);
+  });
+
+  it("重叠不可避免时，返回重叠最小的位置（优于居中完全被盖住）", () => {
+    const canvas = { width: 1000, height: 1000 };
+    const big = { x: 0, y: 0, w: 900, h: 900 };
+    const f = cascadeFrame({ width: 200, height: 200 }, canvas, [big]);
+
+    // 居中会 100% 落在大图内；错开后重叠必须明显下降
+    const ow = Math.min(f.x + f.w, big.x + big.w) - Math.max(f.x, big.x);
+    const oh = Math.min(f.y + f.h, big.y + big.h) - Math.max(f.y, big.y);
+    const ratio = (Math.max(0, ow) * Math.max(0, oh)) / (f.w * f.h);
+    expect(ratio).toBeGreaterThan(0);
+    expect(ratio).toBeLessThan(0.9);
+  });
+
+  it("无可用空位时不抛异常，返回重叠最小的位置", () => {
+    const canvas = { width: 100, height: 100 };
+    const existing = [{ x: 0, y: 0, w: 100, h: 100 }];
+    const f = cascadeFrame({ width: 100, height: 100 }, canvas, existing, { maxTries: 2 });
+    expect(f.w).toBeGreaterThan(0);
+    expect(f.x).toBeGreaterThanOrEqual(0);
   });
 });

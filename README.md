@@ -1,8 +1,10 @@
-# 拼图工具
+# In拼图
 
 面向 Windows 的本地图片拼接工具：导入多张图片 → 模板布局或自由画布排版 → 导出 PNG / JPG。
 
 **全部处理在本地完成，不上传任何图片或编辑数据。** 应用运行期无任何网络请求（`src/__tests__/offline.test.ts` 会对此做可执行断言）。
+
+作者：林间Inline（Everett Lineo）· <https://github.com/EverettLineo> · <https://everettlineo.github.io/>
 
 ## 当前状态
 
@@ -10,9 +12,11 @@ v1 功能已开发完毕（P0~P11），正在做发布前的质量与打包（P1
 
 | 项 | 状态 |
 | --- | --- |
-| 功能范围 | 导入 / 资源库 / 画布编辑 / 裁剪与图像属性 / 图层与对齐吸附 / 20 个模板 / 背景与溢出 / 导出 / 快捷键与配置 |
-| 自动化用例 | 前端 246 项、Rust 24 项（另含 2 项 `#[ignore]` 压力测试） |
+| 功能范围 | 导入 / 资源库 / 画布编辑 / 裁剪与图像属性 / 图层与对齐吸附 / 20 个模板 / 背景与溢出 / 导出 / 快捷键与配置 / 关于 |
+| 自动化用例 | 前端 251 项、Rust 24 项（另含 2 项 `#[ignore]` 压力测试） |
 | 待人工验收 | 见 [`docs/KNOWN_ISSUES.md`](./docs/KNOWN_ISSUES.md) 中标注「影响发布：是」的条目 |
+
+作者：林间Inline（Everett Lineo）· <https://github.com/EverettLineo> · <https://everettlineo.github.io/>
 
 进度以 [`task.md`](./task.md) 为唯一真源。
 

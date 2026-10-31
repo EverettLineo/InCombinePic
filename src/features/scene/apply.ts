@@ -11,6 +11,17 @@ import { containCrop, coverCrop, frameCenter, handlePoints, toImageCrop } from "
 import type { Background, CanvasSpec, DocumentState, Frame, Id } from "../../domain/types";
 import type { SceneDescriptor } from "./derive";
 
+/** 模板容器结构：签名 + 单元格容器。结构不变时走增量更新 */
+interface CellLayout {
+  sig: string;
+  cells: Map<string, Konva.Group>;
+}
+const cellLayouts = new WeakMap<Konva.Layer, CellLayout>();
+
+function cellKey(f: Frame): string {
+  return `${f.x},${f.y},${f.w},${f.h}`;
+}
+
 /** 控制点在屏幕上的边长（px），与视图缩放无关 */
 const HANDLE_SIZE_PX = 7;
 
@@ -85,9 +96,45 @@ export function syncBackground(layer: Konva.Layer, canvas: CanvasSpec) {
  * 圆角必须靠父容器的 clipFunc 实现。
  */
 export function syncLayer(layer: Konva.Layer, scene: SceneDescriptor): void {
+  const inTemplate = scene.nodes.some((n) => n.cell);
+  // 签名只反映"容器结构"：模板模式下每个实例落在哪个格；非模板模式恒为 none。
+  // 结构没变就继续增量更新，避免拖动的每一帧都重建 50 个节点
+  const sig = inTemplate ? scene.nodes.map((n) => (n.cell ? cellKey(n.cell) : "-")).join("|") : "none";
+
+  let layout = cellLayouts.get(layer);
+  if (!layout || layout.sig !== sig) {
+    // 结构变了（进出模板 / 换了格子）：整体重建，宁可贵一次也不要错位
+    layer.destroyChildren();
+    layout = { sig, cells: new Map() };
+    if (inTemplate) {
+      let z = 0;
+      for (const n of scene.nodes) {
+        if (!n.cell) continue;
+        const key = cellKey(n.cell);
+        if (layout.cells.has(key)) continue;
+        const cell = n.cell;
+        const g = new Konva.Group({
+          id: `cellgrp-${key}`,
+          listening: false,
+          clip: { x: 0, y: 0, width: cell.w, height: cell.h },
+        });
+        g.position({ x: cell.x, y: cell.y });
+        g.zIndex(z++);
+        layer.add(g);
+        layout.cells.set(key, g);
+      }
+    }
+    cellLayouts.set(layer, layout);
+  }
+
   const existing = new Map<string, Konva.Group>();
   for (const child of layer.getChildren()) {
-    existing.set(child.id(), child as Konva.Group);
+    const node = child as Konva.Node;
+    if (node.id().startsWith("cellgrp-") && child instanceof Konva.Group) {
+      for (const sub of child.getChildren()) existing.set(sub.id(), sub as Konva.Group);
+    } else {
+      existing.set(node.id(), node as Konva.Group);
+    }
   }
 
   const alive = new Set<string>();
@@ -103,6 +150,13 @@ export function syncLayer(layer: Konva.Layer, scene: SceneDescriptor): void {
     if (r.scale <= 0) return;
     const { cx, cy } = frameCenter(n.frame);
 
+    // 模板模式下挂到所属单元格容器里：容器 clip 到格子，
+    // 图片放大/拖动超出格子的部分被裁掉，不会压到相邻格（2026-10-31 反馈）
+    const cellGroup = n.cell ? layout.cells.get(cellKey(n.cell)) : undefined;
+    const parent: Konva.Container = cellGroup ?? layer;
+    const originX = n.cell ? n.cell.x : 0;
+    const originY = n.cell ? n.cell.y : 0;
+
     let group = existing.get(n.id);
     let bundle = group ? bundles.get(group) : undefined;
     if (!group || !bundle) {
@@ -115,8 +169,10 @@ export function syncLayer(layer: Konva.Layer, scene: SceneDescriptor): void {
       group.add(image);
       group.add(border);
       bundles.set(group, { image, border });
-      layer.add(group);
+      parent.add(group);
       bundle = { image, border };
+    } else if (group.getParent() !== parent) {
+      group.moveTo(parent);
     }
 
     const { image, border } = bundle;
@@ -131,10 +187,11 @@ export function syncLayer(layer: Konva.Layer, scene: SceneDescriptor): void {
     image.scaleX(n.flipH ? -1 : 1);
     image.scaleY(n.flipV ? -1 : 1);
 
-    group.position({ x: cx, y: cy });
+    group.position({ x: cx - originX, y: cy - originY });
     group.rotation(n.rotation);
     group.opacity(n.opacity);
-    group.zIndex(index);
+    // 单元格容器内只有一个子节点，设 zIndex 反而会越界；堆叠顺序只在直接挂在层上时才有意义
+    if (!cellGroup) group.zIndex(index);
 
     // 圆角：按显示框裁剪内容。半径上限取短边一半，否则路径自交会画出奇怪形状
     const halfW = n.frame.w / 2;
