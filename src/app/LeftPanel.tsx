@@ -1,38 +1,16 @@
 import { LibraryPanel } from "../features/library/LibraryPanel";
-import { TemplatePanel } from "../features/templates/TemplatePanel";
-import { useViewStore } from "../state/viewStore";
 
 /**
- * 左侧面板外壳：资源库 / 模板两个标签页。
+ * 左侧面板：固定为资源库。
  *
- * 与右栏同样的理由：标签页是纯界面状态，不入 viewStore，也不进撤销历史。
+ * 模板曾在这里与资源库并列，现已移到右栏——模板改变的是整体布局，
+ * 属于"对整个画布的操作"，和属性/图层/画布同类，放在右栏更符合心智。
  */
 export function LeftPanel() {
-  const tab = useViewStore((s) => s.leftTab);
-  const setTab = useViewStore((s) => s.setLeftTab);
-
   return (
     <aside className="panel panel--left">
-      <div className="panel__tabs" role="tablist">
-        <button
-          role="tab"
-          aria-selected={tab === "library"}
-          className={`panel__tab${tab === "library" ? " panel__tab--active" : ""}`}
-          onClick={() => setTab("library")}
-        >
-          资源库
-        </button>
-        <button
-          role="tab"
-          aria-selected={tab === "templates"}
-          className={`panel__tab${tab === "templates" ? " panel__tab--active" : ""}`}
-          onClick={() => setTab("templates")}
-        >
-          模板
-        </button>
-      </div>
-
-      {tab === "library" ? <LibraryPanel /> : <TemplatePanel />}
+      <div className="panel__title">资源库</div>
+      <LibraryPanel />
     </aside>
   );
 }

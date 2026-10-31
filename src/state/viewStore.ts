@@ -12,8 +12,7 @@ export const MAX_ZOOM = 8;
  * 视图状态**不进入撤销历史、不持久化、不影响导出像素尺寸**。
  * 因此本 store 与 docStore 完全隔离，任何"选中变化"都不应产生撤销记录。
  */
-export type LeftTab = "library" | "templates";
-export type RightTab = "props" | "layers" | "canvas";
+export type RightTab = "props" | "layers" | "canvas" | "templates";
 
 /** 选图弹窗的两个用途：填入模板空格 / 替换已有实例的图片 */
 export type PickerTarget =
@@ -33,10 +32,8 @@ export interface ViewStore extends ViewState {
   exportOpen: boolean;
   openExport: () => void;
   closeExport: () => void;
-  /** 左/右面板当前标签页：放这里是为了让偏好持久化与快捷键（Ctrl+O）都能改它 */
-  leftTab: LeftTab;
+  /** 右栏当前标签页（属性 / 图层 / 画布 / 模板）。左栏固定为资源库，没有标签页 */
   rightTab: RightTab;
-  setLeftTab: (tab: LeftTab) => void;
   setRightTab: (tab: RightTab) => void;
   /** 是否有待执行的导入请求（Ctrl+O 触发，由资源库面板消费） */
   pendingImport: boolean;
@@ -69,7 +66,6 @@ export const useViewStore = create<ViewStore>((set, get) => ({
   picker: null,
   exportOpen: false,
   aboutOpen: false,
-  leftTab: "library" as LeftTab,
   rightTab: "props" as RightTab,
   pendingImport: false,
 
@@ -83,9 +79,8 @@ export const useViewStore = create<ViewStore>((set, get) => ({
   openAbout: () => set({ aboutOpen: true }),
   closeAbout: () => set({ aboutOpen: false }),
 
-  setLeftTab: (tab) => set({ leftTab: tab }),
   setRightTab: (tab) => set({ rightTab: tab }),
-  requestImport: () => set({ pendingImport: true, leftTab: "library" }),
+  requestImport: () => set({ pendingImport: true }),
   consumeImport: () => set({ pendingImport: false }),
 
   setZoom: (zoom) => set({ zoom: clamp(zoom, MIN_ZOOM, MAX_ZOOM) }),

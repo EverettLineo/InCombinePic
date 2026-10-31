@@ -305,11 +305,14 @@ input:focus {
   align-items: center;
   gap: 8px;
   padding: 0 12px 8px;
+  /* 右栏只有 320px：模板页的"当前：xx（n 格）"与按钮允许换行，不要互相挤压 */
+  flex-wrap: wrap;
 }
 
 .lib-toolbar__meta {
   font-size: var(--fs-xs);
   color: var(--text-secondary);
+  min-width: 0;
 }
 
 .lib-toolbar__spacer {

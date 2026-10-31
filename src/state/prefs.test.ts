@@ -26,10 +26,9 @@ describe("normalizePrefs（T11.4 的白名单）", () => {
   });
 
   it("非法的枚举值回落到默认项", () => {
-    const p = normalizePrefs({ exportFormat: "gif", librarySort: "magic", leftTab: "x", rightTab: 1 });
+    const p = normalizePrefs({ exportFormat: "gif", librarySort: "magic", rightTab: 1 });
     expect(p.exportFormat).toBe("png");
     expect(p.librarySort).toBe("custom");
-    expect(p.leftTab).toBe("library");
     expect(p.rightTab).toBe("props");
   });
 
@@ -37,13 +36,12 @@ describe("normalizePrefs（T11.4 的白名单）", () => {
     const p = normalizePrefs({
       exportFormat: "jpeg",
       librarySort: "name",
-      leftTab: "templates",
-      rightTab: "layers",
+      rightTab: "templates",
     });
     expect(p.exportFormat).toBe("jpeg");
     expect(p.librarySort).toBe("name");
-    expect(p.leftTab).toBe("templates");
-    expect(p.rightTab).toBe("layers");
+    // 模板已移到右栏，属于合法的右栏标签
+    expect(p.rightTab).toBe("templates");
   });
 });
 

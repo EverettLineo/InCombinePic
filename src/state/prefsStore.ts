@@ -15,7 +15,7 @@ import { setCanvasSize } from "../domain/document";
 import { loadPrefsJson, savePrefsJson } from "../platform/ipc";
 import { useDocStore } from "./docStore";
 import { useLibraryStore } from "./libraryStore";
-import { useViewStore, type LeftTab, type RightTab } from "./viewStore";
+import { useViewStore, type RightTab } from "./viewStore";
 
 export interface Prefs {
   /** 导出面板上次使用的格式 */
@@ -25,7 +25,6 @@ export interface Prefs {
   canvasWidth: number;
   canvasHeight: number;
   librarySort: LibrarySortMode;
-  leftTab: LeftTab;
   rightTab: RightTab;
 }
 
@@ -35,12 +34,10 @@ export const DEFAULT_PREFS: Prefs = {
   canvasWidth: 2400,
   canvasHeight: 1600,
   librarySort: "custom",
-  leftTab: "library",
   rightTab: "props",
 };
 
-const LEFT_TABS: LeftTab[] = ["library", "templates"];
-const RIGHT_TABS: RightTab[] = ["props", "layers", "canvas"];
+const RIGHT_TABS: RightTab[] = ["props", "layers", "canvas", "templates"];
 
 function clampInt(v: unknown, min: number, max: number, fallback: number): number {
   const n = typeof v === "number" ? Math.round(v) : Number.NaN;
@@ -61,7 +58,6 @@ export function normalizePrefs(raw: unknown): Prefs {
     librarySort: (LIBRARY_SORT_MODES as readonly string[]).includes(o.librarySort as string)
       ? (o.librarySort as LibrarySortMode)
       : DEFAULT_PREFS.librarySort,
-    leftTab: LEFT_TABS.includes(o.leftTab as LeftTab) ? (o.leftTab as LeftTab) : DEFAULT_PREFS.leftTab,
     rightTab: RIGHT_TABS.includes(o.rightTab as RightTab)
       ? (o.rightTab as RightTab)
       : DEFAULT_PREFS.rightTab,
@@ -114,7 +110,7 @@ function applyPrefs(p: Prefs): void {
     docStore.markExported();
   }
   useLibraryStore.getState().setSortMode(p.librarySort);
-  useViewStore.setState({ leftTab: p.leftTab, rightTab: p.rightTab });
+  useViewStore.setState({ rightTab: p.rightTab });
 }
 
 /** 启动时加载偏好；返回最终生效的偏好 */
@@ -143,8 +139,8 @@ export async function initPrefs(): Promise<Prefs> {
 
   // 面板标签与排序模式由各自 store 驱动，这里把变化同步进偏好
   useViewStore.subscribe((s, prev) => {
-    if (s.leftTab !== prev.leftTab || s.rightTab !== prev.rightTab) {
-      usePrefsStore.getState().setPrefs({ leftTab: s.leftTab, rightTab: s.rightTab });
+    if (s.rightTab !== prev.rightTab) {
+      usePrefsStore.getState().setPrefs({ rightTab: s.rightTab });
     }
   });
   useLibraryStore.subscribe((s, prev) => {
