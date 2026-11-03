@@ -261,7 +261,8 @@ pub fn png_bytes(path: &Path, max_edge: u32) -> Result<(Vec<u8>, u32, u32), AppE
         return Err(AppError::new(ErrorCode::DecodeFailed, "图片尺寸为空"));
     }
 
-    let limit = max_edge.max(16);
+    // 上限 8192：既够 20,000px 画布上的单格使用，又挡住异常参数导致的一次性超大分配
+    let limit = max_edge.clamp(16, 8192);
     let scale = (limit as f64 / w.max(h) as f64).min(1.0);
     // 原图比目标小就不放大，避免无意义插值
     let target = if scale >= 1.0 {

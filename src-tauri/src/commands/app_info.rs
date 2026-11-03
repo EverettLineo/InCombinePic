@@ -12,7 +12,7 @@ pub struct AppInfo {
 #[tauri::command]
 pub fn app_info() -> AppInfo {
     AppInfo {
-        name: "In拼图".to_string(),
+        name: "In拼图·何罗鱼".to_string(),
         version: env!("CARGO_PKG_VERSION").to_string(),
         offline: true,
     }

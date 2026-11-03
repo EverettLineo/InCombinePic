@@ -50,6 +50,10 @@ export function useAppShortcuts() {
           view.closePicker();
           return;
         }
+        if (view.settingsOpen) {
+          view.closeSettings();
+          return;
+        }
         if (view.aboutOpen) {
           view.closeAbout();
           return;

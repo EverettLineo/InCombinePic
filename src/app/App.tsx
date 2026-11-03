@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { CanvasArea } from "../features/canvas/CanvasArea";
 import { CropEditor } from "../features/crop/CropEditor";
 import { AboutDialog } from "../features/about/AboutDialog";
+import { SettingsDialog } from "../features/settings/SettingsDialog";
 import { ExportDialog } from "../features/export/ExportDialog";
 import { ImagePicker } from "../features/templates/ImagePicker";
 import { BenchScreen } from "../features/scene/BenchScreen";
@@ -61,7 +62,8 @@ export default function App() {
   return (
     <div className="workspace">
       <header className="header">
-        <span className="header__title">{info?.name ?? "拼图工具"}</span>
+        <img className="header__brand" src="/icon.png" alt="" aria-hidden />
+        <span className="header__title">{info?.name ?? "In拼图·何罗鱼"}</span>
         <span className="header__meta">{info ? `v${info.version}` : "正在获取版本…"}</span>
 
         <span className="header__divider" />
@@ -82,13 +84,19 @@ export default function App() {
           ↷
         </button>
 
-        {dirty ? <span className="header__meta">· 有未导出修改</span> : null}
+        {dirty ? <span className="header__badge">有未导出修改</span> : null}
         <span className="header__spacer" />
-        {info?.offline ? <span className="badge">本地处理 · 离线可用</span> : null}
         <button
-          className="btn-quiet header__about"
+          className="btn-header"
+          onClick={() => useViewStore.getState().openSettings()}
+          title="设置（动效与性能）"
+        >
+          设置
+        </button>
+        <button
+          className="btn-header"
           onClick={() => useViewStore.getState().openAbout()}
-          title="应用信息与作者"
+          title="关于：版本、隐私、何罗鱼"
         >
           关于
         </button>
@@ -115,6 +123,7 @@ export default function App() {
       <ImagePicker />
       <ExportDialog />
       <AboutDialog version={info?.version ?? ""} />
+      <SettingsDialog />
 
       {error ? (
         <div className="error-box">

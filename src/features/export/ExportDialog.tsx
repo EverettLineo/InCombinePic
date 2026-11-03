@@ -105,6 +105,8 @@ function ExportSession() {
   }
 
   async function start() {
+    // 双击/回车连按会重复触发：导出是重操作，重复启动会争抢同一条导出通道
+    if (running) return;
     if (sizeError) {
       setLocalError(sizeError);
       return;
@@ -308,7 +310,7 @@ function ExportSession() {
               <button
                 className="btn-primary"
                 onClick={() => void start()}
-                disabled={!!sizeError}
+                disabled={!!sizeError || running}
               >
                 {status === "error" ? "重试导出" : "导出"}
               </button>

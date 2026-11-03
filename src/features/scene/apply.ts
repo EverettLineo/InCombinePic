@@ -297,7 +297,7 @@ export function syncSelection(
       new Konva.Rect({
         id: `sel-${it.id}`,
         listening: false,
-        stroke: "#2f7ce0",
+        stroke: "#3976E8",
         strokeWidth: 1.5,
         strokeScaleEnabled: false,
         dash: [4, 3],
@@ -322,7 +322,7 @@ export function syncSelection(
           width: size,
           height: size,
           fill: "#ffffff",
-          stroke: "#2f7ce0",
+          stroke: "#3976E8",
           strokeWidth: 1.5,
           strokeScaleEnabled: false,
         }),
@@ -348,7 +348,7 @@ export function syncGuides(layer: Konva.Layer, guides: readonly SnapGuide[]): vo
       new Konva.Line({
         id: `guide-${i}`,
         listening: false,
-        stroke: "#e0457b",
+        stroke: "#8B5CF6",
         strokeWidth: 1,
         strokeScaleEnabled: false,
         dash: [5, 4],

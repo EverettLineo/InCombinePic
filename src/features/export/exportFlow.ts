@@ -33,6 +33,10 @@ export interface ExportRequest {
  */
 export async function runExport(req: ExportRequest): Promise<void> {
   const store = useExportStore.getState();
+  // 防御性检查：调用方（面板按钮）已禁用，但快捷键/脚本仍可能重复触发。
+  // 两次导出会同时占用 Rust 侧的单一 job，结果是两边都失败。
+  if (useExportStore.getState().status === "running") return;
+
   const doc = useDocStore.getState().doc;
   const items = useLibraryStore.getState().items;
   const revisionAtStart = useDocStore.getState().revision;

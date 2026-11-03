@@ -28,6 +28,10 @@ export interface ViewStore extends ViewState {
   aboutOpen: boolean;
   openAbout: () => void;
   closeAbout: () => void;
+  /** 设置面板是否打开 */
+  settingsOpen: boolean;
+  openSettings: () => void;
+  closeSettings: () => void;
   /** 导出面板是否打开 */
   exportOpen: boolean;
   openExport: () => void;
@@ -66,6 +70,7 @@ export const useViewStore = create<ViewStore>((set, get) => ({
   picker: null,
   exportOpen: false,
   aboutOpen: false,
+  settingsOpen: false,
   rightTab: "props" as RightTab,
   pendingImport: false,
 
@@ -78,6 +83,8 @@ export const useViewStore = create<ViewStore>((set, get) => ({
   closeExport: () => set({ exportOpen: false }),
   openAbout: () => set({ aboutOpen: true }),
   closeAbout: () => set({ aboutOpen: false }),
+  openSettings: () => set({ settingsOpen: true }),
+  closeSettings: () => set({ settingsOpen: false }),
 
   setRightTab: (tab) => set({ rightTab: tab }),
   requestImport: () => set({ pendingImport: true }),

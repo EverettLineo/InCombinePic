@@ -68,3 +68,27 @@ describe("parsePrefs（磁盘内容可能损坏）", () => {
     expect("instances" in p).toBe(false);
   });
 });
+
+describe("观感与性能开关（默认性能优先）", () => {
+  it("默认关闭动画与装饰效果", () => {
+    expect(DEFAULT_PREFS.motion).toBe("reduced");
+    expect(DEFAULT_PREFS.effects).toBe("off");
+  });
+
+  it("合法值被保留，非法值回落默认", () => {
+    expect(normalizePrefs({ motion: "full", effects: "on" })).toMatchObject({
+      motion: "full",
+      effects: "on",
+    });
+    expect(normalizePrefs({ motion: "yes", effects: 1 })).toMatchObject({
+      motion: "reduced",
+      effects: "off",
+    });
+  });
+
+  it("旧配置文件没有这两个字段时按性能优先处理", () => {
+    const p = parsePrefs(JSON.stringify({ exportFormat: "jpeg" }));
+    expect(p.motion).toBe("reduced");
+    expect(p.effects).toBe("off");
+  });
+});

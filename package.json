@@ -1,7 +1,7 @@
 {
   "name": "pintu",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Windows 本地图片拼接工具：自由画布与模板布局，全本地处理",
   "author": "Everett Lineo <everettlineo@gmail.com>",
   "license": "MIT",

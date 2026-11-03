@@ -245,6 +245,7 @@ export function CanvasArea() {
         />
       ) : (
         <div className="canvas-empty">
+          <img className="canvas-empty__mark" src="/icon.png" alt="" aria-hidden />
           <div className="canvas-empty__title">画布为空</div>
           <div className="canvas-empty__hint">
             {items.length === 0

@@ -33,6 +33,25 @@ function toSceneImage(img: HTMLImageElement, item?: LibraryItem): SceneImage {
   };
 }
 
+/**
+ * 释放不再被画布引用的解码位图。
+ *
+ * 2048px 的位图每张约 16 MB（2048×2048×4）。用户把图从画布移除后缓存仍会一直占着，
+ * 50 张就是 800 MB —— 这是运行期最容易被忽略的内存增长点。
+ *
+ * 只清「当前没有任何实例引用」的条目：仍在画布上的绝不释放，
+ * 否则会出现"图忽然变空白"这种更难查的问题。
+ */
+export function pruneSources(active: ReadonlySet<Id>): void {
+  for (const [id, img] of imageCache) {
+    if (active.has(id)) continue;
+    // 断开 src 才能真正释放解码后的像素，仅从 Map 删除只是丢掉引用
+    img.src = "";
+    imageCache.delete(id);
+    urlCache.delete(id);
+  }
+}
+
 /** 已缓存的直接同步返回，避免重建后闪一下空白 */
 export function getCachedSource(itemId: Id, item?: LibraryItem): SceneImage | undefined {
   const img = imageCache.get(itemId);

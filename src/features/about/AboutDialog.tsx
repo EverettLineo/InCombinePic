@@ -5,8 +5,10 @@ import { useViewStore } from "../../state/viewStore";
 /**
  * 关于面板。
  *
- * 放的不只是致谢：应用名、版本、作者与两个主页入口都在这里。
- * 安装包里没有 README，这个面板是用户能找到出处的唯一地方。
+ * 这里承担三件事，都是别处不该重复的：
+ * 1. **产品身份**：名称、版本、作者、主页；
+ * 2. **隐私与离线的完整交代**：全应用只在这里说明一次，界面其它位置不再重复贴标签；
+ * 3. **文化出处**：何罗鱼的古籍原文、释义与设计关联，并明确区分原文与后世推测。
  */
 export function AboutDialog({ version }: { version: string }) {
   const open = useViewStore((s) => s.aboutOpen);
@@ -27,19 +29,18 @@ export function AboutDialog({ version }: { version: string }) {
   return (
     <div className="crop-overlay" onPointerDown={close}>
       <div className="about-dialog" onPointerDown={(e) => e.stopPropagation()}>
-        <div className="about-dialog__head">
-          <span className="about-dialog__logo">In</span>
-          <div>
-            <div className="about-dialog__name">In拼图</div>
-            <div className="about-dialog__sub">本地图片拼接工具 · 全部处理在本机完成</div>
+        <div className="about-hero">
+          <img className="about-hero__icon" src="/icon.png" alt="In拼图·何罗鱼 图标" />
+          <div className="about-hero__text">
+            <div className="about-hero__name">In拼图·何罗鱼</div>
+            <div className="about-hero__sub">本地图片拼接 · 山海经神兽工具集</div>
           </div>
-          <span className="crop-dialog__spacer" />
-          <button onClick={close} title="关闭（Esc）">
+          <button className="about-hero__close" onClick={close} title="关闭（Esc）">
             关闭
           </button>
         </div>
 
-        <div className="about-dialog__body">
+        <div className="about-body">
           <dl className="about-facts">
             <dt>作者</dt>
             <dd>林间Inline（Everett Lineo）</dd>
@@ -59,12 +60,50 @@ export function AboutDialog({ version }: { version: string }) {
             </dd>
           </dl>
 
-          <p className="about-dialog__note">
-            图片与编辑数据只在本机内存与本地磁盘中流转，不上传、不联网、无遥测。
-            文档内容不落盘，关闭应用后不会保留。
-          </p>
+          <section className="about-section">
+            <h3 className="about-section__title">隐私与离线</h3>
+            <ul className="about-list">
+              <li>图片解码、渲染、导出全部在本机完成，不会上传任何图片与编辑数据。</li>
+              <li>运行期不发起网络请求：无账号、无遥测、无自动更新、无云端同步。</li>
+              <li>文档内容（图片、实例、撤销历史）不落盘，关闭应用后不保留。</li>
+              <li>
+                仅保存界面偏好于 <code>%APPDATA%\com.everettlineo.pintu\prefs.json</code>；
+                缩略图缓存位于 <code>%LOCALAPPDATA%\com.everettlineo.pintu\thumbnails</code>。
+              </li>
+              <li>卸载不会删除你自己导出的图片文件。</li>
+            </ul>
+          </section>
+
+          <section className="about-section">
+            <h3 className="about-section__title">
+              何罗鱼 <span className="about-section__tag">《山海经·北山经》</span>
+            </h3>
+            <blockquote className="about-quote">
+              又北四百里，曰谯明之山。谯水出焉，而西流注于河。其中多何罗之鱼，一首而十身，
+              其音如吠犬，食之已痈。
+            </blockquote>
+            <p className="about-p">
+              谯明山下，谯水向西汇入黄河，水中有很多何罗鱼。它一个头、十个身子，
+              叫声像狗吠；古人相信吃了它能治痈肿。
+            </p>
+            <p className="about-p">
+              取名于此，是因为拼图这件事与它同构：<strong>一个画布，多张图片</strong>。
+              「一首」是画布，「十身」是每一张图；十身共享一首，正如多图合成一幅。
+              图标里五道流动的色块，取的是「十身」与谯水的意象。
+            </p>
+            <p className="about-caveat">
+              引文依通行本《山海经》，个别字句各版本略有出入。「一首十身」的实物原型并无定论：
+              有研究者推测与头足类（章鱼、乌贼）有关，也有解释为群鱼首尾相衔造成的视觉误认。
+              这些均属后世推测，<strong>不是古籍原文</strong>。晋代郭璞曾作《山海经图赞》咏此鱼，
+              此处不具引，以免转引失真。
+            </p>
+          </section>
 
           {error ? <p className="about-dialog__error">{error}</p> : null}
+
+          <p className="about-foot">
+            自有代码以 MIT 许可发布；第三方组件许可见随附的 THIRD_PARTY_NOTICES.md。
+          </p>
         </div>
       </div>
     </div>

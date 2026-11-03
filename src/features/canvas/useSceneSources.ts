@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { DocumentState, LibraryItem } from "../../domain/types";
 import type { SceneSources } from "../scene/derive";
-import { getCachedSource, loadSource } from "./sourceCache";
+import { getCachedSource, loadSource, pruneSources } from "./sourceCache";
 
 /**
  * 画布显示用的图像源。
@@ -21,15 +21,17 @@ export function useSceneSources(doc: DocumentState, items: LibraryItem[]): Scene
     let alive = true;
     const needed = neededKey ? neededKey.split("|") : [];
 
+    // 不再被画布引用的位图立即释放（50 张 2048px 位图约 800 MB）
+    pruneSources(new Set(needed));
+
     // 先把已缓存的直接同步进来，避免已加载过的图在重建后闪一下空白
     const immediate: SceneSources = {};
     for (const id of needed) {
       const src = getCachedSource(id, items.find((i) => i.id === id));
       if (src) immediate[id] = src;
     }
-    if (Object.keys(immediate).length > 0) {
-      setSources((s) => ({ ...s, ...immediate }));
-    }
+    // 整体替换而不是合并：已移出画布的条目不该继续留在 state 里
+    setSources(() => ({ ...immediate }));
 
     for (const id of needed) {
       if (immediate[id]) continue;
