@@ -317,10 +317,7 @@ export function KonvaStage({
     const scene = deriveScene(doc, sources);
 
     syncBackground(bgLayer, doc.canvas);
-    syncEmptyCells(
-      bgLayer,
-      scene.emptyCells.map((c) => c.frame),
-    );
+    syncEmptyCells(bgLayer, scene.emptyCells);
     contentLayer.clip({ x: 0, y: 0, width: doc.canvas.width, height: doc.canvas.height });
     syncLayer(contentLayer, scene);
     syncCanvasOutline(overlay, doc.canvas);

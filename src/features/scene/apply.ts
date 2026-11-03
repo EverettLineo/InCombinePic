@@ -22,6 +22,9 @@ function cellKey(f: Frame): string {
   return `${f.x},${f.y},${f.w},${f.h}`;
 }
 
+/** 空槽位编号字号（画布单位）。按画布尺寸的比例感取值，缩放后仍清晰 */
+const EMPTY_CELL_NUM_SIZE = 48;
+
 /** 控制点在屏幕上的边长（px），与视图缩放无关 */
 const HANDLE_SIZE_PX = 7;
 
@@ -359,11 +362,14 @@ export function syncGuides(layer: Konva.Layer, guides: readonly SnapGuide[]): vo
  * 空白单元格占位（T8.4 / T8.5）：虚线框 + 淡底，告诉用户"这里可以放图"。
  * 画在背景层，图片覆盖其上；不进导出。
  */
-export function syncEmptyCells(layer: Konva.Layer, cells: readonly Frame[]): void {
+export function syncEmptyCells(
+  layer: Konva.Layer,
+  cells: readonly { frame: Frame; order: number }[],
+): void {
   for (const child of layer.getChildren()) {
     if (child.id().startsWith("cell-")) child.destroy();
   }
-  cells.forEach((f, i) => {
+  cells.forEach(({ frame: f, order }, i) => {
     layer.add(
       new Konva.Rect({
         id: `cell-${i}`,
@@ -377,6 +383,24 @@ export function syncEmptyCells(layer: Konva.Layer, cells: readonly Frame[]): voi
         strokeWidth: 1,
         strokeScaleEnabled: false,
         dash: [6, 6],
+      }),
+    );
+    // 编号即填充顺序：用户看到几号，双击就会填几号
+    layer.add(
+      new Konva.Text({
+        id: `cell-${i}-num`,
+        listening: false,
+        x: f.x,
+        y: f.y + f.h / 2 - EMPTY_CELL_NUM_SIZE * 0.7,
+        width: f.w,
+        height: EMPTY_CELL_NUM_SIZE * 1.4,
+        text: String(order),
+        align: "center",
+        verticalAlign: "middle",
+        fontSize: EMPTY_CELL_NUM_SIZE,
+        fontFamily: "system-ui, -apple-system, 'Segoe UI', sans-serif",
+        fontStyle: "600",
+        fill: "#9aa6b6",
       }),
     );
   });

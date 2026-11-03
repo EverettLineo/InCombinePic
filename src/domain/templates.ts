@@ -224,15 +224,25 @@ export function templateFrames(
   });
 }
 
-/** 单元格是否已被某个实例占据：用实例中心落点判断，避免浮点相等比较 */
+/**
+ * 单元格是否已被某个实例占据。
+ *
+ * 判定方向是「**实例中心**落在哪个格里」，而不是「格子中心落在哪个实例里」。
+ * 后者在图片被放大后会出错：放大后的 frame 盖住邻格中心，于是邻格被误判为已占用，
+ * 明明看着是空的却填不进去（2026-11-03 反馈）。方向反过来后，判定与渲染层的
+ * `derive.cellOf` 完全一致：渲染把图裁进哪一格，占位就算哪一格。
+ */
 function isCellOccupied(frames: readonly Frame[], doc: DocumentState): boolean[] {
-  return frames.map((f) => {
-    const cx = f.x + f.w / 2;
-    const cy = f.y + f.h / 2;
-    return doc.instances.some(
-      (it) => cx >= it.frame.x && cx <= it.frame.x + it.frame.w && cy >= it.frame.y && cy <= it.frame.y + it.frame.h,
+  const occupied = frames.map(() => false);
+  for (const it of doc.instances) {
+    const cx = it.frame.x + it.frame.w / 2;
+    const cy = it.frame.y + it.frame.h / 2;
+    const idx = frames.findIndex(
+      (f) => cx >= f.x && cx <= f.x + f.w && cy >= f.y && cy <= f.y + f.h,
     );
-  });
+    if (idx >= 0) occupied[idx] = true;
+  }
+  return occupied;
 }
 
 /** 空白单元格下标（T8.4「空格留空」+ T8.5 点击填空） */

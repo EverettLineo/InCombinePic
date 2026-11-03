@@ -53,6 +53,14 @@ export function LibraryPanel() {
   /** 拖动结束后要吞掉随之而来的 click，避免误触预览 */
   const suppressClickRef = useRef(false);
   const listRef = useRef<HTMLUListElement | null>(null);
+  /**
+   * 单击预览的延迟句柄。
+   *
+   * 不能一点就弹：预览是 fixed 全屏遮罩，会把双击的第二下抢走，
+   * 导致"双击放入"时灵时不灵（2026-11-03 反馈）。延迟 240ms，
+   * 双击到达时取消预览，只执行放入。
+   */
+  const previewTimer = useRef<number | null>(null);
   /** 拖到画布方向的浮标；仅在指针离开资源库时显示 */
   const [ghost, setGhost] = useState<{ name: string; x: number; y: number } | null>(null);
 
@@ -111,6 +119,21 @@ export function LibraryPanel() {
    * 会屏蔽页面内的 HTML5 拖拽事件，两者不能共存。文件拖入是基线硬需求，
    * 所以排序改为自己处理 pointerdown/move/up。
    */
+  function cancelPreviewTimer() {
+    if (previewTimer.current !== null) {
+      window.clearTimeout(previewTimer.current);
+      previewTimer.current = null;
+    }
+  }
+
+  function schedulePreview(it: LibraryItem) {
+    cancelPreviewTimer();
+    previewTimer.current = window.setTimeout(() => {
+      previewTimer.current = null;
+      setPreview(it);
+    }, 240);
+  }
+
   function beginDrag(e: React.PointerEvent<HTMLLIElement>, index: number) {
     if (e.button !== 0) return;
     const startX = e.clientX;
@@ -255,10 +278,11 @@ export function LibraryPanel() {
                     suppressClickRef.current = false;
                     return;
                   }
-                  setPreview(it);
+                  schedulePreview(it);
                 }}
                 onDoubleClick={() => {
-                  // 双击放入画布：先关掉单击打开的预览，避免遮挡
+                  // 双击放入画布：取消待触发的预览，避免遮罩抢走第二下点击
+                  cancelPreviewTimer();
                   setPreview(null);
                   placeItem(it);
                 }}

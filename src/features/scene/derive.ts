@@ -51,8 +51,13 @@ export interface SceneDescriptor {
   nodes: SceneNode[];
   /** 有多少实例因为图像未就绪而暂不渲染 */
   pendingCount: number;
-  /** 当前模板的空白单元格（含模板内下标）：用于占位绘制与点击填空（T8.4/T8.5） */
-  emptyCells: Array<{ index: number; frame: Frame }>;
+  /**
+   * 当前模板的空白单元格（含模板内下标与**填充序号**）。
+   *
+   * 序号按格子编号升序排，1 开始：用户看到的"1/2/3"就是双击时依次填入的顺序
+   * （2026-11-03 反馈：要让用户知道下一个空格是哪一个）。
+   */
+  emptyCells: Array<{ index: number; frame: Frame; order: number }>;
 }
 
 export function deriveScene(doc: DocumentState, sources: SceneSources): SceneDescriptor {
@@ -93,7 +98,11 @@ export function deriveScene(doc: DocumentState, sources: SceneSources): SceneDes
   const emptyCells = template
     ? (() => {
         const frames = templateFrames(template, doc.canvas, doc.gap);
-        return emptyCellIndices(doc, template).map((i) => ({ index: i, frame: frames[i] }));
+        return emptyCellIndices(doc, template).map((i, order) => ({
+          index: i,
+          frame: frames[i],
+          order: order + 1,
+        }));
       })()
     : [];
 

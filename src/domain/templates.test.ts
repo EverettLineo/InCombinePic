@@ -321,3 +321,55 @@ describe("20 个模板逐个验收（T8.10 的自动化部分）", () => {
     expect(f1.x - (f0.x + f0.w)).toBe(16);
   });
 });
+
+describe("空槽位判定的方向（2026-11-03 反馈）", () => {
+  it("邻格图片被放大后，不应把邻格挤成已占用", () => {
+    const t = findTemplate("grid-2x2")!;
+    const canvas = { width: 1200, height: 800 };
+    const frames = templateFrames(t, canvas, 0);
+    // 第 0 格的图被放大到几乎覆盖整张画布，中心仍在第 0 格
+    const blown = {
+      ...inst("a", "item-a", 0),
+      frame: { x: 50, y: 30, w: 1100, h: 700 },
+    };
+    const doc = docOf([blown], canvas);
+
+    // 旧实现：格子中心落在 blown 内 → 全被判为占用 → 返回 []
+    // 新实现：只有 blown 的中心所在格（第 0 格）算占用
+    expect(emptyCellIndices(doc, t)).toEqual([1, 2, 3]);
+    void frames;
+  });
+
+  it("按编号顺序连续填充：每次取当前编号最小的空槽", () => {
+    const t = findTemplate("grid-2x2")!;
+    const canvas = { width: 1200, height: 800 };
+    let doc = docOf([], canvas);
+
+    const filled: number[] = [];
+    for (let round = 0; round < 4; round++) {
+      const empties = emptyCellIndices(doc, t);
+      expect(empties.length).toBe(4 - round);
+      const next = empties[0];
+      filled.push(next);
+      doc = placeIntoCell(doc, t, next, { itemId: `item-${round}`, width: 400, height: 300 }, `n${round}`);
+    }
+
+    expect(filled).toEqual([0, 1, 2, 3]);
+    expect(emptyCellIndices(doc, t)).toEqual([]);
+  });
+
+  it("中间格被占用时，填充顺序跳过它而不是重排编号", () => {
+    const t = findTemplate("grid-2x2")!;
+    const canvas = { width: 1200, height: 800 };
+    const frames = templateFrames(t, canvas, 0);
+    let doc = docOf([{ ...inst("b", "item-b", 0), frame: frames[1] }], canvas);
+
+    const order: number[] = [];
+    for (let i = 0; i < 3; i++) {
+      const next = emptyCellIndices(doc, t)[0];
+      order.push(next);
+      doc = placeIntoCell(doc, t, next, { itemId: `x-${i}`, width: 400, height: 300 }, `m${i}`);
+    }
+    expect(order).toEqual([0, 2, 3]);
+  });
+});
