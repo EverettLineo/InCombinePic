@@ -65,6 +65,6 @@ src-tauri/gen/
 启动 In拼图·何罗鱼.exe
 *.tmp
 *.bak
-
+*.exe
 # 会话工作数据（不属于交付物）
 .workbuddy/
