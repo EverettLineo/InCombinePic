@@ -56,9 +56,8 @@ export function LibraryPanel() {
   /**
    * 单击预览的延迟句柄。
    *
-   * 不能一点就弹：预览是 fixed 全屏遮罩，会把双击的第二下抢走，
-   * 导致"双击放入"时灵时不灵（2026-11-03 反馈）。延迟 240ms，
-   * 双击到达时取消预览，只执行放入。
+   * 预览是 fixed 全屏遮罩，立即弹出会抢走双击的第二下点击，导致双击放入时灵时不灵。
+   * 延迟 240ms，双击到达时取消预览，只执行放入。
    */
   const previewTimer = useRef<number | null>(null);
   /** 拖到画布方向的浮标；仅在指针离开资源库时显示 */
@@ -66,7 +65,7 @@ export function LibraryPanel() {
 
   const sorted = getSorted();
 
-  /** 释放单个资源：级联移除画布实例，且不进入撤销历史（基线 §6.6、§11.2） */
+  /** 释放单个资源：级联移除画布实例，且不进入撤销历史 */
   async function onRelease(it: LibraryItem) {
     const linked = doc.instances.filter((i) => i.libraryItemId === it.id).length;
     const msg =
@@ -88,7 +87,7 @@ export function LibraryPanel() {
     if (preview?.id === it.id) setPreview(null);
   }
 
-  /** 清空资源库：批量释放，二次确认（基线 §6.6） */
+  /** 清空资源库：批量释放，二次确认 */
   async function onClearAll() {
     if (items.length === 0) return;
     const linked = doc.instances.length;
@@ -116,7 +115,7 @@ export function LibraryPanel() {
    * 列表排序用手写指针事件，而不是 HTML5 draggable。
    *
    * 原因：Windows 上 Tauri 启用原生文件拖放（dragDropEnabled，文件路径只能由原生层给出）
-   * 会屏蔽页面内的 HTML5 拖拽事件，两者不能共存。文件拖入是基线硬需求，
+   * 会屏蔽页面内的 HTML5 拖拽事件，两者不能共存。文件拖入是硬需求，
    * 所以排序改为自己处理 pointerdown/move/up。
    */
   function cancelPreviewTimer() {

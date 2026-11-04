@@ -10,9 +10,8 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .manage(commands::export::ExportState::default())
-        // 注意：#[tauri::command] 生成的隐藏符号位于命令所在模块内，
-        // 因此这里必须写完整路径 commands::<模块>::<函数>，
-        // 写成 commands::<模块> 会报 E0433。
+        // #[tauri::command] 生成的隐藏符号位于命令所在模块内，这里必须写完整路径
+        // commands::<模块>::<函数>；只写到模块会报 E0433。
         .invoke_handler(tauri::generate_handler![
             commands::app_info::app_info,
             commands::app_info::open_author_link,

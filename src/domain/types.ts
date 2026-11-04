@@ -1,9 +1,7 @@
 /**
- * 领域模型（对应需求基线 §4.2 的四类概念）
+ * 领域模型。
  *
- * 硬约束（见 docs/ARCHITECTURE.md §1）：
- * 本文件及其所在 domain 目录 **不得** import React / Konva / @tauri-apps。
- * 该约束由 eslint.config.js 在构建期强制。
+ * domain 目录不得 import React / Konva / @tauri-apps，由 eslint 在构建期强制。
  */
 
 export type Id = string;
@@ -11,7 +9,7 @@ export type Id = string;
 /** 概念 1：资源库条目。同一物理路径可存在多条，互不影响 */
 export interface LibraryItem {
   id: Id;
-  /** 仅用于"同路径判重"（基线 §6.4 明确不做内容哈希） */
+  /** 仅用于"同路径判重"（不做内容哈希） */
   sourcePath: string;
   fileName: string;
   /** 导入序号：同名文件的稳定次级排序依据，避免顺序无故跳动 */
@@ -49,7 +47,7 @@ export interface Frame {
 export interface CanvasInstance {
   id: Id;
   libraryItemId: Id;
-  /** 模板切换时"复用最早创建实例"的判定依据（基线 §9.4 第 3 条） */
+  /** 模板切换时"复用最早创建实例"的判定依据 */
   createdSeq: number;
   frame: Frame;
   /** 非破坏性裁剪，永远相对源图像素，不随旋转改变 */
@@ -103,7 +101,7 @@ export interface ViewState {
   selection: Id[];
 }
 
-/** 默认画布：2400×1600（基线 §5.3 推荐值，已采纳，见 task.md D-03） */
+/** 默认画布：2400×1600 */
 export const DEFAULT_CANVAS: CanvasSpec = {
   width: 2400,
   height: 1600,

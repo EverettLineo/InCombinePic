@@ -35,11 +35,11 @@ interface DragState {
 }
 
 /**
- * 裁剪编辑器（T7.1）。
+ * 裁剪编辑器。
  *
- * 为什么用独立浮层而不是画布内的裁剪框：
- * 画布中的显示是"裁剪 → 填满格子"的结果，在结果上再框一层，用户看到的是被二次裁过的画面，
- * 拖动手柄时的反馈会很怪。浮层里展示**完整源图**，框住的就是真正的源图像素区域。
+ * 用独立浮层而非画布内裁剪框：画布显示的是裁剪后填满格子的结果，
+ * 在结果上再框一层，拖动手柄时看到的是被二次裁剪的画面。
+ * 浮层展示完整源图，框住的才是真正的源图像素区域。
  */
 export function CropEditor() {
   const instanceId = useViewStore((s) => s.cropEditor);
@@ -107,7 +107,7 @@ function CropSession({ instanceId }: { instanceId: string }) {
     return () => ro.disconnect();
   }, []);
 
-  // Esc 取消（基线 §11.1：Esc 优先取消当前编辑）
+  // Esc 取消（Esc 优先取消当前编辑）
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") close();

@@ -12,7 +12,7 @@ import {
 } from "./export";
 import { createEmptyDocument, DEFAULT_CANVAS } from "./types";
 
-describe("planStrips（T10.2 的接缝来源）", () => {
+describe("planStrips：接缝来源", () => {
   it("高度小于一条时只有一条，且不额外渲染重叠行", () => {
     expect(planStrips(1600)).toEqual([{ index: 0, rowStart: 0, rows: 1600, renderRows: 1600 }]);
   });
@@ -53,7 +53,7 @@ describe("planStrips（T10.2 的接缝来源）", () => {
   });
 });
 
-describe("validateExportSize（T10.5）", () => {
+describe("validateExportSize", () => {
   it("常见尺寸通过", () => {
     expect(validateExportSize(2400, 1600)).toBeNull();
     expect(validateExportSize(20000, 20000)).toContain("安全内存");
@@ -87,7 +87,7 @@ describe("宽高比联动", () => {
   });
 });
 
-describe("默认文件名（T10.4）", () => {
+describe("默认文件名", () => {
   it("格式为 拼图_YYYYMMDD_HHMMSS.ext", () => {
     const d = new Date(2026, 9, 30, 9, 5, 3);
     expect(defaultExportName("png", d)).toBe("拼图_20261030_090503.png");
@@ -101,7 +101,7 @@ describe("默认文件名（T10.4）", () => {
   });
 });
 
-describe("透明说明（T10.6 的对外口径）", () => {
+describe("透明说明", () => {
   it("PNG + 透明：说明会保留且不导出棋盘格", () => {
     expect(transparencyNote("png", "transparent")).toContain("保留透明");
     expect(transparencyNote("png", "transparent")).toContain("棋盘格");

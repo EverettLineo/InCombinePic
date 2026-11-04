@@ -1,7 +1,7 @@
 use crate::error::{AppError, ErrorCode};
 use serde::Serialize;
 
-/// 应用元信息：用于验证 IPC 通道可用（G1 门禁要求"一次 IPC 调用成功往返"）
+/// 应用元信息，同时用于验证 IPC 通道可用：一次调用成功往返。
 #[derive(Serialize)]
 pub struct AppInfo {
     pub name: String,

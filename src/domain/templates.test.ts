@@ -36,8 +36,8 @@ function docOf(list: CanvasInstance[], canvas = { width: 3000, height: 2000 }): 
 
 const src = (itemId: string, w = 400, h = 300): FillSource => ({ itemId, width: w, height: h });
 
-describe("模板清单（T8.1）", () => {
-  it("共 20 个，分类配额与 D-07 一致", () => {
+describe("模板清单", () => {
+  it("共 20 个，分类配额固定", () => {
     expect(TEMPLATES).toHaveLength(20);
     const count = (c: TemplateDef["category"]) => TEMPLATES.filter((t) => t.category === c).length;
     expect(count("grid")).toBe(6);
@@ -85,7 +85,7 @@ describe("模板清单（T8.1）", () => {
   });
 });
 
-describe("templateFrames（T8.2）", () => {
+describe("templateFrames", () => {
   const t = findTemplate("grid-2x2")!;
 
   it("间距为 0 时相邻单元格共用边界，不留 1px 缝", () => {
@@ -113,7 +113,7 @@ describe("templateFrames（T8.2）", () => {
   });
 });
 
-describe("emptyCellIndices（T8.4）", () => {
+describe("emptyCellIndices", () => {
   it("未占用的格子全部返回", () => {
     const t = findTemplate("grid-2x2")!;
     const frames = templateFrames(t, { width: 1200, height: 800 }, 0);
@@ -132,7 +132,7 @@ describe("emptyCellIndices（T8.4）", () => {
   });
 });
 
-describe("applyTemplate（T8.3 / T8.8）", () => {
+describe("applyTemplate", () => {
   const t = findTemplate("grid-2x2")!;
   const canvas = { width: 1200, height: 800 };
   let n = 0;
@@ -216,7 +216,7 @@ describe("applyTemplate（T8.3 / T8.8）", () => {
   });
 });
 
-describe("placeIntoCell / replaceInstanceSource（T8.5 / T8.6）", () => {
+describe("placeIntoCell / replaceInstanceSource", () => {
   const t = findTemplate("grid-2x2")!;
   const canvas = { width: 1200, height: 800 };
 
@@ -243,7 +243,7 @@ describe("placeIntoCell / replaceInstanceSource（T8.5 / T8.6）", () => {
   });
 });
 
-describe("模板与撤销的原子性（T8.9）", () => {
+describe("模板与撤销的原子性", () => {
   it("一次 applyTemplate 只产生一个新文档对象", () => {
     const t = findTemplate("grid-2x2")!;
     const doc = docOf([], { width: 1200, height: 800 });
@@ -278,7 +278,7 @@ describe("新建实例的裁剪初始化", () => {
   });
 });
 
-describe("20 个模板逐个验收（T8.10 的自动化部分）", () => {
+describe("20 个模板逐个验收", () => {
   const canvas = { width: 2400, height: 1600 };
 
   it.each(TEMPLATES.map((t) => [t.name, t] as const))(
@@ -322,7 +322,7 @@ describe("20 个模板逐个验收（T8.10 的自动化部分）", () => {
   });
 });
 
-describe("空槽位判定的方向（2026-11-03 反馈）", () => {
+describe("空槽位判定的方向", () => {
   it("邻格图片被放大后，不应把邻格挤成已占用", () => {
     const t = findTemplate("grid-2x2")!;
     const canvas = { width: 1200, height: 800 };

@@ -1,13 +1,10 @@
 /**
- * 导入流程编排（基线 §6.2 / §6.3 / §6.4）。
+ * 导入流程编排。
  *
- * 三种入口（文件选择器 / 拖放 / 剪贴板）最终都汇入 `importPaths`，
- * 共用同一套判重、预警、失败汇总逻辑。不允许任何入口另开一条特殊路径。
+ * 文件对话框、拖放、剪贴板三种入口都汇入 importPaths，共用判重、预警与失败汇总，
+ * 不允许任何入口另开特殊路径。
  *
- * 三条不可退让的规则：
- * 1. 单文件失败不拖垮整批 —— 其余文件照常入库，最后汇总失败原因；
- * 2. 同路径才判重，不比较内容哈希（基线 §6.4 明确排除）；
- * 3. 大图不静默导入 —— 先预警，由用户决定是否继续。
+ * 约束：单文件失败不影响整批；只按路径判重，不比较内容哈希；大图先预警再由用户决定。
  */
 
 import {
@@ -84,7 +81,7 @@ export async function importPaths(
   let skippedDuplicateCount = 0;
 
   if (duplicates.length > 0 && !opts.skipDuplicateAsk) {
-    // 基线 §6.4：询问跳过或再次添加。按整批询问，避免逐个弹窗打断操作。
+    // 判重时询问跳过或再次添加；按整批询问，避免逐个弹窗打断操作
     const addAsNew = await askUser(
       `有 ${duplicates.length} 个文件已在资源库中（同一来源路径）。\n\n选择"再次添加"会为它们各创建独立条目；选择"跳过"则只导入新文件。`,
       "再次添加",
@@ -111,7 +108,7 @@ export async function importPaths(
   const okOutcomes = outcomes.filter((o) => o.ok && o.meta);
   const failures = outcomes.filter((o) => !o.ok).map(toFailure);
 
-  // 大图 / 大总量预警：给出可执行的数字，让用户自己判断（基线 §6.3）
+  // 大图 / 大总量预警：给出可执行的数字，让用户自己判断
   // 单张阈值由 Rust 判定（meta.risky），前端只做汇总，避免两处阈值不同步。
   const totalMb = okOutcomes.reduce((sum, o) => sum + (o.meta?.estimatedRgbaMb ?? 0), 0);
   const risky = okOutcomes.filter((o) => o.meta?.risky);
@@ -170,12 +167,12 @@ export async function importImages(): Promise<ImportReport | null> {
   return importPaths(paths, "picker");
 }
 
-/** 入口二：从窗口拖入文件（基线 §6.2） */
+/** 入口二：从窗口拖入文件 */
 export async function importFromDrop(paths: string[]): Promise<ImportReport | null> {
   return importPaths(paths, "drop");
 }
 
-/** 入口三：剪贴板图片（只入库，不自动放到画布，基线 §6.2） */
+/** 入口三：剪贴板图片（只入库，不自动放到画布） */
 export async function importFromClipboard(): Promise<ImportReport | null> {
   const path = await readClipboardImage();
   if (!path) return null;

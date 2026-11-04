@@ -1,9 +1,8 @@
 /**
- * 画布边界与内容溢出（T9.4 / T9.5 / T9.6）。
+ * 画布边界与内容溢出。
  *
- * 基线 §5.3/§10.2 的口径：边界外内容在**预览与导出中同样被裁切**，
- * 工具既不能自动扩张画布，也不能自动挪动越界的图片。
- * 因此这里只做"检测与报告"，任何修正都必须由用户操作产生。
+ * 边界外内容在预览与导出中同样被裁切，工具既不自动扩张画布，也不自动挪动越界图片。
+ * 这里只做检测与报告，任何修正都必须由用户操作产生。
  */
 
 import type { Background, DocumentState, Frame, Id } from "./types";
@@ -85,7 +84,7 @@ export function normalizeAngle(angle: number): number {
   return ((angle % 360) + 360) % 360;
 }
 
-/** 常用画布尺寸预设（基线只要求默认 2400×1600，其余为便捷项） */
+/** 常用画布尺寸预设（默认 2400×1600，其余为便捷项） */
 export const CANVAS_PRESETS: Array<{ label: string; width: number; height: number }> = [
   { label: "横图 3:2", width: 2400, height: 1600 },
   { label: "方图 1:1", width: 2000, height: 2000 },

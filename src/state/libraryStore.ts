@@ -10,13 +10,13 @@ import type { Id, LibraryItem } from "../domain/types";
 /**
  * 资源库域 store。
  *
- * 与 docStore 分离的理由（基线 §11.2）：
- * 资源库的导入 / 释放 / 清空**不进入画布撤销历史**，
+ * 与 docStore 分离的理由：
+ * 资源库的导入 / 释放 / 清空不进入画布撤销历史，
  * 而画布实例的增删属于可撤销编辑。两者混在一个 store 里迟早会串。
  */
 export interface LibraryStore {
   items: LibraryItem[];
-  /** 用户手动顺序，独立保存；切换排序模式不清空（基线 §6.5） */
+  /** 用户手动顺序，独立保存；切换排序模式不清空 */
   customOrder: Id[];
   sortMode: LibrarySortMode;
 

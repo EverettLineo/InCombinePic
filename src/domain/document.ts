@@ -1,12 +1,10 @@
 /**
  * 文档状态的纯函数操作集。
  *
- * 设计约束（docs/ARCHITECTURE.md §8）：
- * 所有文档变更都必须表现为 `DocumentState -> DocumentState` 的纯函数，
- * 不得就地修改、不得有副作用。理由：撤销/重做需要状态可深比较、可快照，
- * 而不是回放命令（模板切换这类跨多对象操作回放极易不一致）。
+ * 所有文档变更都表现为 DocumentState -> DocumentState 的纯函数，不就地修改、无副作用：
+ * 撤销依赖状态快照与深比较，命令回放遇到模板切换这类跨对象操作极易不一致。
  *
- * 本文件不依赖 React / Konva / IPC，可 100% 单测。
+ * 不依赖 React / Konva / IPC，可完整单测。
  */
 
 import type {
@@ -21,14 +19,14 @@ import type {
   Rotation,
 } from "./types";
 
-/** 新建实例时的默认属性：无边框、无圆角、不透明（基线 §8.8） */
+/** 新建实例的默认外观：无边框、无圆角、不透明 */
 export const DEFAULT_BORDER = { width: 0, color: "#000000" } as const;
 
 export function fullCrop(width: number, height: number): CropRect {
   return { x: 0, y: 0, w: width, h: height };
 }
 
-/** createdSeq 单调递增，用于模板切换时"复用最早创建的实例"（基线 §9.4 第 3 条） */
+/** 单调递增的创建序号，模板切换时据此复用最早创建的实例 */
 export function nextCreatedSeq(doc: DocumentState): number {
   return doc.instances.reduce((max, it) => Math.max(max, it.createdSeq), -1) + 1;
 }
@@ -40,7 +38,7 @@ export interface CreateInstanceInput {
   sourceWidth: number;
   sourceHeight: number;
   frame: Frame;
-  /** 显式指定创建序号：批量创建时逐次取 `nextCreatedSeq` 会重复，模板填充因此需要传入 */
+  /** 显式指定创建序号：批量创建时逐次取 nextCreatedSeq 会重复，模板填充需要传入 */
   seq?: number;
 }
 
@@ -77,7 +75,7 @@ export function removeInstances(doc: DocumentState, ids: readonly Id[]): Documen
   return next.length === doc.instances.length ? doc : { ...doc, instances: next };
 }
 
-/** 释放资源库条目时级联移除其全部实例（基线 §6.6） */
+/** 释放资源库条目时级联移除其全部实例 */
 export function removeInstancesByLibraryItem(
   doc: DocumentState,
   libraryItemIds: readonly Id[],
@@ -107,7 +105,7 @@ export function updateInstance(
   return changed ? { ...doc, instances: next } : doc;
 }
 
-/** 图层顺序调整：数组内移动（基线 §8.6，不做独立的置顶/置底按钮） */
+/** 图层顺序调整：数组内移动（不做独立的置顶/置底按钮） */
 export function reorderInstance(doc: DocumentState, from: number, to: number): DocumentState {
   const n = doc.instances.length;
   if (from === to || from < 0 || to < 0 || from >= n || to >= n) return doc;
@@ -121,7 +119,7 @@ export function setCanvasSize(doc: DocumentState, width: number, height: number)
   const w = Math.max(1, Math.round(width));
   const h = Math.max(1, Math.round(height));
   if (doc.canvas.width === w && doc.canvas.height === h) return doc;
-  // 只改边界，不移动/缩放既有实例（基线 §5.3）
+  // 只改边界，不移动/缩放既有实例
   return { ...doc, canvas: { ...doc.canvas, width: w, height: h } };
 }
 
@@ -142,7 +140,7 @@ export function setTemplate(doc: DocumentState, templateId: string | null): Docu
   return doc.templateId === templateId ? doc : { ...doc, templateId };
 }
 
-/** 旋转只改内容朝向，不改变 frame（docs/ARCHITECTURE.md §4） */
+/** 旋转只改内容朝向，不改变 frame */
 export function rotateInstance(doc: DocumentState, id: Id, step: 90 | -90): DocumentState {
   const it = doc.instances.find((i) => i.id === id);
   if (!it) return doc;
@@ -179,7 +177,7 @@ export function instanceCountByLibraryItem(doc: DocumentState, libraryItemId: Id
   return doc.instances.filter((it) => it.libraryItemId === libraryItemId).length;
 }
 
-/** 会话内是否存在"有内容"的文档（用于退出保护判据，基线 §13.1） */
+/** 会话内是否存在"有内容"的文档（用于退出保护判据） */
 export function hasContent(doc: DocumentState): boolean {
   return doc.instances.length > 0;
 }
@@ -187,9 +185,8 @@ export function hasContent(doc: DocumentState): boolean {
 /**
  * 命中测试：返回包含该点（画布坐标）的最顶层实例 id。
  *
- * 从数组末尾（顶层）向前遍历——数组顺序即图层顺序（ADR-0003 决策二）。
- * frame 是轴对齐显示框（ADR-0003 决策四），因此直接用矩形包含判定即可，
- * 无需考虑旋转。
+ * 从数组末尾向前遍历，数组顺序即图层顺序，末尾为顶层。
+ * frame 是轴对齐显示框，因此直接用矩形包含判定，无需考虑旋转。
  */
 export function hitTest(doc: DocumentState, x: number, y: number): Id | null {
   for (let i = doc.instances.length - 1; i >= 0; i--) {

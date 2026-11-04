@@ -9,10 +9,9 @@ import {
 import { createEmptyDocument, type DocumentState } from "../domain/types";
 
 /**
- * 文档域 store —— 撤销/重做的容器。
+ * 文档 store，同时是撤销/重做的容器。
  *
- * 关键设计：所有变更必须经由 `commit`，不允许组件直接 setState 改 doc。
- * 历史栈只在这一处维护，调用点无需关心（docs/ARCHITECTURE.md §8）。
+ * 所有变更必须经 commit，组件不得直接改 doc；历史栈只在这一处维护。
  */
 
 export interface CommitOptions {
@@ -32,7 +31,7 @@ export interface DocStore extends History {
   doc: DocumentState;
   /** 提交计数，供渲染适配层判断是否需要重建投影 */
   revision: number;
-  /** 会话内存在尚未成功导出的画布变更（基线 §13.1 退出保护的判据） */
+  /** 会话内存在尚未成功导出的画布变更（退出保护的判据） */
   dirty: boolean;
   /** 当前合并键与最近提交时间，用于判定能否并入上一步 */
   mergeKey: string | null;
@@ -40,7 +39,7 @@ export interface DocStore extends History {
 
   commit: (recipe: (doc: DocumentState) => DocumentState, opts?: CommitOptions) => void;
   /**
-   * 由资源释放等外部动作引起的文档变化，**不进入撤销历史**（基线 §6.6、§11.2）。
+   * 由资源释放等外部动作引起的文档变化，不进入撤销历史。
    * 语义必须与 commit 分开表达：只有 commit 会入栈。
    */
   commitNoHistory: (recipe: (doc: DocumentState) => DocumentState) => void;

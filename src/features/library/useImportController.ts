@@ -8,7 +8,7 @@ import {
   type ImportReport,
 } from "./importFlow";
 
-/** 焦点在可编辑控件上时，Ctrl+V 必须走文本粘贴（基线 §6.2） */
+/** 焦点在可编辑控件上时，Ctrl+V 必须走文本粘贴 */
 function isEditableTarget(target: EventTarget | null): boolean {
   const el = target as HTMLElement | null;
   if (!el) return false;

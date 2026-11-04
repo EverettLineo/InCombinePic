@@ -1,5 +1,44 @@
-# Logs
-logs
+# ─────────────────────────────────────────────
+# 操作系统与文件管理器产生的杂项
+# ─────────────────────────────────────────────
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.DS_Store
+._*
+.Spotlight-V100/
+.Trashes/
+
+# ─────────────────────────────────────────────
+# 编辑器与 IDE
+# ─────────────────────────────────────────────
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.fleet/
+*.swp
+*.swo
+*~
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# ─────────────────────────────────────────────
+# Node / 前端
+# ─────────────────────────────────────────────
+node_modules/
+dist/
+dist-ssr/
+.vite/
+coverage/
+*.tsbuildinfo
+.eslintcache
+*.local
+
+# 日志
+logs/
 *.log
 npm-debug.log*
 yarn-debug.log*
@@ -7,28 +46,25 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
-*.local
+# 环境变量（只提交示例文件）
+.env
+.env.*
+!.env.example
 
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
-.DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
-
+# ─────────────────────────────────────────────
 # Rust / Tauri 构建产物
-src-tauri/target
-src-tauri/gen
+# 与 src-tauri/.gitignore 双保险：即使该文件丢失也不会误提交 target
+# ─────────────────────────────────────────────
+src-tauri/target/
+src-tauri/gen/
 
-# 测试覆盖率
-coverage
+# ─────────────────────────────────────────────
+# 本地测试与临时文件
+# ─────────────────────────────────────────────
+# 指向构建产物的本地启动入口（符号链接，仅本机有效）
+启动 In拼图·何罗鱼.exe
+*.tmp
+*.bak
 
 # 会话工作数据（不属于交付物）
 .workbuddy/

@@ -28,10 +28,9 @@ import { runExport } from "./exportFlow";
 const FORMAT_LABEL: Record<ExportFormat, string> = { png: "PNG", jpeg: "JPEG" };
 
 /**
- * 导出面板（T10.1）。
+ * 导出面板。
  *
- * 交互顺序刻意做成"先看参数再看路径"：尺寸与格式决定用户要选什么文件，
- * 反过来会让人选完路径又得回头改。
+ * 先展示参数再选路径：尺寸与格式决定用户要选什么文件，反过来会出现选完路径又回头改的情况。
  */
 export function ExportDialog() {
   const open = useViewStore((s) => s.exportOpen);
@@ -56,7 +55,7 @@ function ExportSession() {
   const reset = useExportStore((s) => s.reset);
   const requestCancel = useExportStore((s) => s.requestCancel);
 
-  // 初值来自偏好：同一台机器上用户上次选的格式不该每次重置（T11.4）
+  // 初值来自偏好：同一台机器上用户上次选的格式不该每次重置
   const prefs = usePrefsStore((s) => s.prefs);
   const [format, setFormat] = useState<ExportFormat>(prefs.exportFormat);
   const [quality, setQuality] = useState(prefs.jpegQuality);

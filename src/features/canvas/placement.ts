@@ -2,7 +2,7 @@
  * 把资源库条目放到画布上。
  *
  * 这里只负责"几何 + 文档提交"，不接触渲染。
- * 放置属于可撤销的画布编辑（基线 §11.2），因此走 docStore.commit。
+ * 放置属于可撤销的画布编辑，因此走 docStore.commit。
  */
 
 import { addInstance, createInstance, hitTest, makeInstanceId } from "../../domain/document";
@@ -19,7 +19,7 @@ import { useDocStore } from "../../state/docStore";
 import { useLibraryStore } from "../../state/libraryStore";
 import { useViewStore } from "../../state/viewStore";
 
-/** 单个资源放置到画布中央（T5.2 的起点；避让已有内容留到 T5.2 完善） */
+/** 单个资源放置到画布中央（落点需避让已有内容） */
 export function placeItem(item: LibraryItem): string | null {
   const { commit } = useDocStore.getState();
   let createdId: string | null = null;
@@ -42,8 +42,7 @@ export function placeItem(item: LibraryItem): string | null {
       }
     }
 
-    // 已有内容时缩到 70% 并斜向错开：否则新图会完全盖在旧图下面，
-    // 用户双击后什么都看不到，会以为双击没生效（2026-10-31 反馈）
+    // 已有内容时缩到 70% 并斜向错开，否则新图会完全盖在旧图下面，看起来像没有响应
     const frame = cascadeFrame(
       { width: item.width, height: item.height },
       { width: doc.canvas.width, height: doc.canvas.height },
@@ -66,7 +65,7 @@ export function placeItem(item: LibraryItem): string | null {
   return createdId;
 }
 
-/** 把资源库当前顺序的全部图片一次性铺到画布（基线 §7.1 初始布局） */
+/** 把资源库当前顺序的全部图片一次性铺到画布 */
 export function placeAllItems(): number {
   const items = useLibraryStore.getState().getSorted();
   if (items.length === 0) return 0;
@@ -114,9 +113,9 @@ const DROP_WIDTH_RATIO = 0.4;
 /**
  * 拖拽投放（资源库 → 画布）。落点决定行为，三档优先级：
  *
- * 1. **模板空格**：落点在某个空白单元格内 → 填入该格（用户意图明确，最高优先）；
- * 2. **已有实例**：落点压在某张图上 → 替换它的图片（位置/边框/圆角保留，裁剪重置）；
- * 3. **空白处**：以落点为中心按比例放置，并夹回画布内。
+ * 1. 模板空格：落点在空白单元格内，填入该格；
+ * 2. 已有实例：落点压在某张图上，替换其图片，位置、边框、圆角保留，裁剪重置；
+ * 3. 空白处：以落点为中心按比例放置，并夹回画布内。
  *
  * 返回是否真的发生了编辑，供调用方决定是否给出提示。
  */

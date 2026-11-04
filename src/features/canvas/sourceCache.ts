@@ -1,8 +1,7 @@
 /**
- * 场景图像源的加载与缓存（画布预览与导出共用）。
+ * 场景图像源的加载与缓存，预览与导出共用。
  *
- * 为什么独立成模块：导出必须与预览用**同一批位图**。如果导出自己再解码一次，
- * 两次的解码尺寸/方向稍有差异，差分验收就永远过不了。
+ * 导出必须与预览使用同一批位图：各自解码一次，尺寸或方向稍有差异就会破坏像素一致性。
  */
 
 import type { DocumentState, Id, LibraryItem } from "../../domain/types";
@@ -12,7 +11,7 @@ import type { SceneImage } from "../scene/derive";
 /**
  * 显示与导出统一按 2048 最长边取位图。
  *
- * 50 张 8000×6000 原图全量驻留约 9 GB（T0.8 实测单张 183 MB），
+ * 50 张 8000×6000 原图全量驻留约 9 GB，
  * 2048 边长的位图只需其零头。
  */
 export const DISPLAY_MAX_EDGE = 2048;
@@ -105,15 +104,12 @@ export interface ExportSources {
 }
 
 /**
- * 为导出准备图像源（T10.12）。
+ * 为导出准备图像源。
  *
- * 与预览源有两点不同，都是缺陷驱动出来的：
- *
- * 1. **不用 asset 协议**。`asset.localhost` 与页面不同源，加载的位图会污染 canvas，
- *    导出时 `toBlob` 直接抛 "Tainted canvases may not be exported"（2026-10-31 实测）。
- *    改走 `read_image_png` + `blob:`，同源，不污染。
- * 2. **分辨率按输出尺寸算**，而不是预览用的固定 2048。否则画布 2400 宽时，
- *    导出实际只有 2048 的像素细节，大图必然糊。
+ * 1. 不用 asset 协议：`asset.localhost` 与页面不同源，加载的位图会污染 canvas，
+ *    导出时 `toBlob` 抛 "Tainted canvases may not be exported"。改走
+ *    `read_image_png` 加 `blob:`，同源且不污染。
+ * 2. 分辨率按输出尺寸计算而非固定 2048，否则画布宽度超过 2048 时导出细节不足。
  */
 export async function loadExportSources(
   doc: DocumentState,

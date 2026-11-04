@@ -1,10 +1,10 @@
 /**
- * 资源库排序（基线 §6.5）。
+ * 资源库排序。
  *
  * 三条硬要求：
  * 1. 自定义顺序必须可恢复 —— 切换排序模式不破坏已保存的手动顺序；
  * 2. 同名文件要有稳定次级规则（导入序号），避免顺序无故跳动；
- * 3. 模板填充顺序使用"当前生效"的顺序（基线 §6.5 末条）。
+ * 3. 模板填充顺序使用"当前生效"的顺序。
  */
 
 import type { Id, LibraryItem } from "./types";
@@ -57,7 +57,7 @@ export function sortLibrary(
   if (mode === "name") {
     arr.sort((a, b) => {
       const c = a.fileName.localeCompare(b.fileName, "zh-Hans-CN", { numeric: true });
-      // 同名文件的稳定次级规则：导入序号（基线 §6.5）
+      // 同名文件的稳定次级规则：导入序号
       return c !== 0 ? c : a.importSeq - b.importSeq;
     });
     return arr;
@@ -78,7 +78,7 @@ export function moveInOrder(order: readonly Id[], from: number, to: number): Id[
   return next;
 }
 
-/** 显示用顺序编号：从 1 开始（基线 §6.5 "提供顺序编号"） */
+/** 显示用顺序编号：从 1 开始 */
 export function displayIndex(sortedIndex: number): number {
   return sortedIndex + 1;
 }

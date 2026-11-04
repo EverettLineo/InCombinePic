@@ -1,11 +1,8 @@
 /**
- * 模板定义与模板布局（T8.1 / T8.2 / T8.3 / T8.4 / T8.8）。
+ * 模板定义与模板布局。
  *
- * 单元格用**归一化坐标**（0~1，相对画布）定义，换算时才乘画布尺寸：
- * 画布尺寸可被用户修改（T3.5），若模板按像素写死，改一次画布所有模板都失效。
- *
- * 像素换算时**先算边再相减**（left/right 各自取整），而不是"位置取整 + 宽度取整"。
- * 后者会让相邻单元格之间出现 1px 缝隙——无缝布局（gap=0）下尤其明显（G8 验收项）。
+ * 单元格使用归一化坐标（0~1，相对画布），换算时才乘画布尺寸，改画布尺寸不会让模板失效。
+ * 像素换算先算边再相减，避免相邻单元格之间出现 1px 缝隙。
  */
 
 import { createInstance, nextCreatedSeq } from "./document";
@@ -53,10 +50,10 @@ function grid(cols: number, rows: number): TemplateCell[] {
 }
 
 /**
- * 20 个 v1 模板（D-07 的分类配额：网格 6 / 长图 3 / 多列 4 / 不对称 4 / 照片墙 3）。
+ * 内置模板。
  *
- * 约束：每个模板的单元格面积之和必须等于 1（铺满画布），且互不重叠。
- * 该约束由单测强制——手写坐标最容易出现的错误就是留下一条没人注意的空白缝。
+ * 每个模板的单元格面积之和必须为 1 且互不重叠，由单测强制：
+ * 手写坐标最容易留下的错误就是一条没人注意的空白缝。
  */
 export const TEMPLATES: TemplateDef[] = [
   // ---------- 基础网格 6 ----------
@@ -225,12 +222,10 @@ export function templateFrames(
 }
 
 /**
- * 单元格是否已被某个实例占据。
+ * 判断各单元格是否已被占用。
  *
- * 判定方向是「**实例中心**落在哪个格里」，而不是「格子中心落在哪个实例里」。
- * 后者在图片被放大后会出错：放大后的 frame 盖住邻格中心，于是邻格被误判为已占用，
- * 明明看着是空的却填不进去（2026-11-03 反馈）。方向反过来后，判定与渲染层的
- * `derive.cellOf` 完全一致：渲染把图裁进哪一格，占位就算哪一格。
+ * 以实例中心落在哪个格为准，而不是格子中心落在哪个实例里：图片放大后会盖住邻格中心，
+ * 后一种判定会把空槽误判为已占用，且与渲染层「把图裁进哪一格」的结果不一致。
  */
 function isCellOccupied(frames: readonly Frame[], doc: DocumentState): boolean[] {
   const occupied = frames.map(() => false);
@@ -245,7 +240,7 @@ function isCellOccupied(frames: readonly Frame[], doc: DocumentState): boolean[]
   return occupied;
 }
 
-/** 空白单元格下标（T8.4「空格留空」+ T8.5 点击填空） */
+/** 未被占用的单元格下标，按从左到右、从上到下的顺序排列 */
 export function emptyCellIndices(doc: DocumentState, template: TemplateDef): number[] {
   const frames = templateFrames(template, doc.canvas, doc.gap);
   const occupied = isCellOccupied(frames, doc);
@@ -259,13 +254,13 @@ export interface FillSource {
 }
 
 /**
- * 按模板重排画布（T8.8 的九条语义）。
+ * 按模板重排画布，整个过程只产生一次文档变更。
  *
- * - 按 `order`（资源库当前生效顺序）逐个填格，一个条目一格，不重复创建（规则 5）；
- * - 条目已有实例时复用**最早创建**的那个，其余同条目实例移出画布（规则 3）；
- * - 复用实例保留裁剪/旋转/翻转/透明度/边框/圆角，仅重设 frame（规则 8）；
- * - 未进入新布局的实例全部移出画布，资源库条目不动（规则 7）；
- * - 资源不够时剩余格子留空（规则 6）。
+ * - 按 `order` 逐个填格，一个条目一格；
+ * - 条目已有实例时复用最早创建的那个，其余同条目实例移出画布；
+ * - 复用实例保留裁剪、旋转、翻转、透明度、边框与圆角，仅重设 frame；
+ * - 未进入新布局的实例移出画布，资源库条目不动；
+ * - 资源不足时剩余格子留空。
  */
 export function applyTemplate(
   doc: DocumentState,
@@ -312,7 +307,7 @@ export function applyTemplate(
   return { ...doc, templateId: template.id, instances: next };
 }
 
-/** 把某个资源放进指定单元格（点击空白格，T8.5） */
+/** 把指定资源放入某个单元格 */
 export function placeIntoCell(
   doc: DocumentState,
   template: TemplateDef,

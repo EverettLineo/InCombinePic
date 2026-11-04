@@ -25,7 +25,7 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
-    // 控制台留档便于排查；不上报任何外部服务（基线 §4.3 禁止遥测）
+    // 控制台留档便于排查；不上报任何外部服务（禁止遥测）
     console.error(`[${this.props.areaName}] 渲染失败`, error, info.componentStack);
   }
 

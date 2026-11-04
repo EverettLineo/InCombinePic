@@ -132,7 +132,7 @@ describe("reorderInstance", () => {
 });
 
 describe("setCanvasSize", () => {
-  it("只改画布边界，不移动已有实例（基线 §5.3）", () => {
+  it("只改画布边界，不移动已有实例", () => {
     let doc = addInstance(createEmptyDocument(), inst("a", 0));
     const before = doc.instances[0].frame;
     doc = setCanvasSize(doc, 1200, 900);
@@ -259,7 +259,7 @@ describe("多实例场景", () => {
   });
 });
 
-describe("旋转与裁剪互不影响（T7.3）", () => {
+describe("旋转与裁剪互不影响", () => {
   it("旋转后裁剪，再转回原角度，裁剪数据保持不变", () => {
     let doc = addInstance(createEmptyDocument(), inst("a", 0));
     doc = rotateInstance(doc, "a", 90);

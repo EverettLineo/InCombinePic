@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_PREFS, normalizePrefs, parsePrefs } from "./prefsStore";
 
-describe("normalizePrefs（T11.4 的白名单）", () => {
+describe("normalizePrefs 白名单", () => {
   it("非对象一律回默认值", () => {
     expect(normalizePrefs(null)).toEqual(DEFAULT_PREFS);
     expect(normalizePrefs("abc")).toEqual(DEFAULT_PREFS);
@@ -62,7 +62,7 @@ describe("parsePrefs（磁盘内容可能损坏）", () => {
     expect(p.canvasWidth).toBe(DEFAULT_PREFS.canvasWidth);
   });
 
-  it("偏好里混入文档内容也不会被采纳（T11.5 的护栏）", () => {
+  it("偏好里混入文档内容也不会被采纳", () => {
     const p = parsePrefs(JSON.stringify({ canvasWidth: 3000, instances: [{ id: "a" }] }));
     expect(p.canvasWidth).toBe(3000);
     expect("instances" in p).toBe(false);

@@ -1,5 +1,5 @@
 /**
- * 导出流程编排（T10.2 / T10.8）。
+ * 导出流程编排。
  *
  * 一次导出 = 逐条带渲染 → 交给 Rust 拼接编码 → 落盘。
  * 每渲染完一条才请求下一条，因此界面始终保持可交互，进度也真实。
@@ -29,7 +29,7 @@ export interface ExportRequest {
 
 /**
  * 执行导出。调用方负责尺寸校验、路径选择与覆盖确认。
- * 任何失败都会还原导出状态并保留编辑内容（基线 §12.5）。
+ * 任何失败都会还原导出状态并保留编辑内容。
  */
 export async function runExport(req: ExportRequest): Promise<void> {
   const store = useExportStore.getState();
@@ -87,7 +87,7 @@ export async function runExport(req: ExportRequest): Promise<void> {
     const result = await exportFinish(req.path);
     useExportStore.getState().succeed(result);
 
-    // 导出成功且期间没有新的编辑，才清除"未导出修改"（D-05 口径）
+    // 导出成功且期间没有新的编辑，才清除"未导出修改"
     if (useDocStore.getState().revision === revisionAtStart) {
       useDocStore.getState().markExported();
     }

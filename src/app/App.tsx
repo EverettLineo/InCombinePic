@@ -23,7 +23,7 @@ import { useAppShortcuts } from "./useAppShortcuts";
 import { useCloseGuard } from "./useCloseGuard";
 import { nextUndoLabel } from "../domain/history";
 
-/** 应用外壳：三栏工作区（左资源 / 中画布 / 右属性），遵循基线 §5.2 */
+/** 应用外壳：左资源、中画布、右属性三栏工作区 */
 export default function App() {
   const [info, setInfo] = useState<AppInfo | null>(null);
   const [error, setError] = useState<AppErrorPayload | null>(null);

@@ -13,10 +13,10 @@ pub struct ClipboardImage {
 
 /// 读取剪贴板中的图片并落成临时 PNG 文件。
 ///
-/// 为什么要落盘：资源库条目以 sourcePath 为标识，缩略图、导出都按路径取像素。
-/// 若让"内存图片"另走一条特殊路径，会分裂出第二套生命周期，得不偿失。
+/// 落盘而非走内存：资源库条目以 sourcePath 为标识，缩略图与导出都按路径取像素，
+/// 另开一条内存通道会分裂出第二套生命周期。
 ///
-/// 无图时返回 Ok(None) —— 这是正常情况（用户复制的是文字），不是错误。
+/// 无图时返回 Ok(None)，这是正常情况（剪贴板里是文字），不是错误。
 #[tauri::command]
 pub async fn read_clipboard_image() -> Result<Option<ClipboardImage>, AppError> {
     tauri::async_runtime::spawn_blocking(read_clipboard_image_blocking)

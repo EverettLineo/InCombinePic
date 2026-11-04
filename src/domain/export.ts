@@ -1,5 +1,5 @@
 /**
- * 导出参数的纯逻辑（T10.1 / T10.3~T10.5）。
+ * 导出参数的纯逻辑。
  *
  * 与渲染无关的部分全部放这里：尺寸校验、默认文件名、条带切分。
  * 条带切分必须可测——它是"成图上会不会出现一条缝"的唯一来源。
@@ -10,9 +10,9 @@ import type { CanvasSpec } from "./types";
 export type ExportFormat = "png" | "jpeg";
 
 export const MAX_EXPORT_EDGE = 20000;
-/** 条带高度（基线 T10.2 指定 2048） */
+/** 条带高度 */
 export const STRIP_H = 2048;
-/** 条带之间重叠 1px，避免边界采样产生接缝（P10.2 的既定做法） */
+/** 条带之间重叠 1px，避免边界采样产生接缝 */
 export const STRIP_OVERLAP = 1;
 
 export const JPEG_QUALITY_MIN = 60;
@@ -82,7 +82,7 @@ function pad2(n: number): string {
   return n < 10 ? `0${n}` : String(n);
 }
 
-/** 默认文件名：拼图_YYYYMMDD_HHMMSS.ext（基线 §12.1） */
+/** 默认文件名：拼图_YYYYMMDD_HHMMSS.ext */
 export function defaultExportName(format: ExportFormat, now = new Date()): string {
   const stamp =
     `${now.getFullYear()}${pad2(now.getMonth() + 1)}${pad2(now.getDate())}` +
@@ -98,7 +98,7 @@ export function ensureExtension(name: string, format: ExportFormat): string {
   return `${base}.${ext}`;
 }
 
-/** 导出前的透明说明（基线 §12.3：必须向用户讲清目标格式如何处理透明） */
+/** 导出前的透明说明（需说明目标格式如何处理透明） */
 export function transparencyNote(
   format: ExportFormat,
   backgroundType: CanvasSpec["background"]["type"],

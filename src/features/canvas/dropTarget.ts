@@ -1,12 +1,9 @@
 /**
- * 画布投放目标（供资源库拖拽使用）。
+ * 画布投放目标，供资源库拖拽使用。
  *
- * 为什么用模块级注册而不是 props 传递：
- * 拖拽手势在资源库面板里发起，落点判定需要画布容器的几何
- * （host 的 rect + 视图缩放平移）。两者是兄弟组件，
- * 用 context 或全局 store 会让高频的 pointermove 触发整树重渲染。
- *
- * 这里只在挂载时登记一个函数引用，拖拽过程零 React 参与。
+ * 手势在资源库面板发起，落点判定需要画布容器的几何（rect 与视图缩放平移），
+ * 两者是兄弟组件；用 context 或全局 store 会让高频的 pointermove 触发整树重渲染。
+ * 因此只在挂载时登记一个函数引用，拖拽过程不经过 React。
  */
 
 export type CanvasDropHandler = (itemId: string, clientX: number, clientY: number) => boolean;

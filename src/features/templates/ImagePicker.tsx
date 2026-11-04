@@ -8,10 +8,10 @@ import { useViewStore, type PickerTarget } from "../../state/viewStore";
 import { Thumbnail } from "../../ui/Thumbnail";
 
 /**
- * 选图弹窗（T8.5 填空 / T8.6 替换）。
+ * 选图弹窗。
  *
- * 两个用途共用一个弹窗，因为挑选过程完全一样，只是选中之后的落点不同：
- * 填空直接放入；替换要先确认——基线 §9.2 要求替换必须确认，取消则保留原图。
+ * 填空与替换共用一个弹窗，挑选过程一致，只是选中后的落点不同：
+ * 填空直接放入；替换需先确认，取消则保留原图。
  */
 export function ImagePicker() {
   const target = useViewStore((s) => s.picker);

@@ -4,11 +4,9 @@ import { useViewStore } from "../../state/viewStore";
 /**
  * 设置面板。
  *
- * 目前只有观感/性能两类开关，但独立成面板而不是塞进「关于」：
- * 关于是"看信息"的地方，设置是"改行为"的地方，混在一起用户找不到。
+ * 独立于「关于」：关于用于查看信息，设置用于改变行为。
  *
- * 所有开关都即时生效并落盘（prefsStore 内部 400ms 防抖），没有"确定/取消"——
- * 用户能立刻看到变化，比先确认再应用更直接。
+ * 所有开关即时生效并落盘（prefsStore 内部 400ms 防抖），没有确定/取消按钮。
  */
 export function SettingsDialog() {
   const open = useViewStore((s) => s.settingsOpen);

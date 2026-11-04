@@ -3,12 +3,12 @@ import { askUser, destroyWindow, onCloseRequested } from "../platform/ipc";
 import { useDocStore } from "../state/docStore";
 
 /**
- * 退出保护（T11.3 / D-05）。
+ * 退出保护。
  *
- * D-05 的定义：**会话内文档状态发生过变化且此后未成功导出** → 视为"有未导出编辑"。
- * 该状态由 `docStore.dirty` 承载：每次 `commit` 置脏，成功导出后清除。
+ * 判据：会话内文档状态发生过变化且此后未成功导出，即视为有未导出编辑。
+ * 该状态由 `docStore.dirty` 承载：每次 commit 置脏，成功导出后清除。
  *
- * 取消退出时不做任何清理，现场完整保留（G11 验收项）。
+ * 取消退出时不做清理，现场完整保留。
  */
 export function useCloseGuard() {
   useEffect(() => {

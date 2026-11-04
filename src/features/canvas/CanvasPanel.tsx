@@ -18,9 +18,9 @@ const BG_LABELS: Array<{ type: Background["type"]; label: string; hint: string }
 ];
 
 /**
- * 画布面板（T9.1 / T9.2 / T9.5 / T9.6）。
+ * 画布面板。
  *
- * 背景与尺寸的每次修改都走 `commit`，因此可撤销（基线 §10.1）。
+ * 背景与尺寸的每次修改都走 `commit`，因此可撤销。
  * 连续触发的控件（取色器、角度滑块）用 `mergeKey` 合并为一步。
  */
 export function CanvasPanel() {
@@ -190,7 +190,7 @@ export function CanvasPanel() {
       ) : null}
 
       {bg.type === "transparent" ? (
-        <div className="inspector__hint">棋盘格只是透明的预览提示，不会被导出（基线 §9.3 口径）</div>
+        <div className="inspector__hint">棋盘格只是透明的预览提示，不会被导出</div>
       ) : null}
 
       <div className="inspector__group-title">内容与边界</div>

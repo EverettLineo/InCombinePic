@@ -54,3 +54,37 @@ Copyright (c) 2026 Everett Lineo <everettlineo@gmail.com>
 ```
 
 该信息同时用于 `package.json` 的 `author` 字段与 `Cargo.toml` 的 `authors` 字段，保持三处一致。后续如需变更版权人（例如改为组织名），属许可证文本变更，须新开 ADR 记录。
+
+## 6. 补充：发布前的许可证核查（2026-11-03）
+
+对照 `Cargo.lock` 与 `package-lock.json` 实测后，对第 4 节作出两处更正，并补充一项此前未记录的事实。**原决策（MIT）不变，不新开 ADR。**
+
+### 6.1 更正：`image` / `fast_image_resize` 是双许可，不是 Apache-2.0 单许可
+
+第 4 节第 4 条要求"Apache-2.0 组件需在分发包附 NOTICE"，依据的是当时对这两个组件的印象。实测元数据为：
+
+| 组件 | 实际许可证 |
+| --- | --- |
+| `image` 0.25.10 | `MIT OR Apache-2.0` |
+| `fast_image_resize` 6.1.0 | `MIT OR Apache-2.0` |
+| `tauri` 2.12.5 | `Apache-2.0 OR MIT` |
+
+本项目统一按 **MIT 分支**使用，因此不产生 Apache-2.0 的 NOTICE 附加义务，只需保留版权声明与许可文本。义务在 `THIRD_PARTY_NOTICES.md` 中按此更正。
+
+### 6.2 补充：依赖图中有 MPL-2.0 组件
+
+第 4 节只写了"禁止 GPL / AGPL / LGPL"，未覆盖 MPL-2.0。实测存在 6 个 MPL-2.0 组件，全部是传递依赖：
+
+| 组件 | 引入路径 | 进入运行产物 |
+| --- | --- | --- |
+| `cssparser` / `cssparser-macros` / `selectors` / `dtoa-short` | `tauri-utils → dom_query` | 否（构建期 codegen） |
+| `option-ext` | `tauri → dirs → dirs-sys` | 是（路径解析） |
+| `lightningcss` | Vite 的 CSS 压缩器 | 否（构建期） |
+
+MPL-2.0 是**文件级**弱著佐权，义务仅限于这些组件自身的源文件（保留声明 + 说明源码获取方式），不会传导到本项目代码，与 MIT 分发兼容。因此判定**不构成违规**，无需移除；但必须在 `THIRD_PARTY_NOTICES.md` 中显式披露，避免发布时被漏掉。
+
+> 若日后要求"依赖图零弱著佐权"，只能改 Tauri 版本或放弃相关能力，代价与收益不成比例，暂不采纳。
+
+### 6.3 补充：品牌资产不在 MIT 范围内
+
+`LICENSE` 只覆盖代码。名称「In拼图·何罗鱼」、图标、五色品牌带与关于面板中的释义文字属品牌资产，已在新增的 `NOTICE.md` 中单列保留权利，避免衍生发行版以官方名义分发。

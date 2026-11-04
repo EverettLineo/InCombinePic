@@ -1,5 +1,5 @@
 /**
- * IPC 唯一出口。所有 Rust 调用集中在此（docs/ARCHITECTURE.md §1 规则 3）。
+ * IPC 唯一出口。所有 Rust 调用集中在此。
  * 其他层不得直接 import @tauri-apps/*，该约束由 eslint 强制。
  */
 
@@ -76,7 +76,7 @@ export interface ProbeOutcome {
 /**
  * 打开系统文件选择器。
  * 故意把 heic/heif 纳入可选范围：让用户能选中并得到明确提示，
- * 而不是在文件列表里根本看不到（基线 §6.1 要求"明确提示不支持"）。
+ * 而不是在文件列表里根本看不到（需明确提示不支持）。
  */
 export async function pickImageFiles(): Promise<string[]> {
   const result = await open({
@@ -171,7 +171,7 @@ export async function saveBenchAndQuit(json: string): Promise<string> {
   return invoke<string>("save_bench_and_quit", { json });
 }
 
-// ---------- 导出（T10） ----------
+// ---------- 导出 ----------
 
 export interface ExportFinishResult {
   path: string;
@@ -237,7 +237,7 @@ export async function pickSavePath(
   return result ?? null;
 }
 
-// ---------- 偏好与窗口（T11.3 / T11.4） ----------
+// ---------- 偏好与窗口 ----------
 
 /** 读取偏好原文；不存在或不可读时返回 null（由前端回落默认值） */
 export async function loadPrefsJson(): Promise<string | null> {
@@ -266,14 +266,14 @@ export async function destroyWindow(): Promise<void> {
   await getCurrentWindow().destroy();
 }
 
-// ---------- 导出源（同源位图，T10.12 修复 canvas 污染） ----------
+// ---------- 导出源（同源位图，避免 canvas 被污染） ----------
 
 /**
  * 读取图片并编码为 PNG 字节（Rust 侧已按 EXIF 方向转正、按最长边缩放）。
  *
- * 为什么不用 asset 协议：`asset.localhost` 与页面不同源，加载的位图会**污染 canvas**，
- * 导出时 `canvas.toBlob` 直接抛 "Tainted canvases may not be exported"。
- * 这里拿字节后用 `Blob` + `URL.createObjectURL` 生成 `blob:` URL，属同源资源。
+ * 不用 asset 协议：`asset.localhost` 与页面不同源，加载的位图会污染 canvas，
+ * 导出时 `canvas.toBlob` 抛 "Tainted canvases may not be exported"。
+ * 这里取字节后用 `Blob` 加 `URL.createObjectURL` 生成 `blob:` URL，属同源资源。
  */
 export async function readImagePng(
   path: string,

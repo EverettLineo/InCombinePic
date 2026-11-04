@@ -1,14 +1,11 @@
 /**
- * 裁剪几何（T7.1 / T7.2 / T7.3）。
+ * 裁剪几何。
  *
- * 坐标约定（与 ADR-0003 一致，不可更改）：
- * - `crop` 永远存**源图像素坐标**，与旋转无关；旋转只改显示朝向，不重写 crop。
- * - 裁剪框编辑器内部用**归一化坐标**（0~1，相对源图宽高）：
- *   界面缩放、预览图分辨率都不进入计算，换一张更清晰的预览图结果不变。
+ * crop 始终存源图像素坐标，与旋转无关：旋转只改显示朝向，不重写 crop。
+ * 编辑器内部用归一化坐标（0~1，相对源图），界面缩放与预览分辨率不参与计算。
  *
- * 比例约束：裁剪框锁定为"旋转后正好等于 frame 比例"的宽高比。
- * 理由见 ADR-0006：frame 是拼接的格子，用户裁剪是在选"这块格子里放照片的哪一部分"，
- * 若允许自由比例，选完后仍会被 coverCrop 二次居中裁切，所见非所得。
+ * 裁剪框锁定为旋转后正好等于 frame 的比例，否则用户裁完仍会被 coverCrop 二次裁切，
+ * 所见非所得。取舍见 docs/adr/ADR-0006。
  */
 
 import type { CropRect, Frame, Rotation } from "./types";
@@ -24,11 +21,7 @@ export type CropHandle = "nw" | "n" | "ne" | "e" | "se" | "s" | "sw" | "w";
 
 const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
 
-/**
- * 源图坐标系下的目标宽高比。
- * 旋转 90/270 时宽高互换，故比例取倒数——否则旋转后裁剪框会与格子不匹配，
- * 表现为"裁剪完还是被二次裁切"。
- */
+/** 源图坐标系下的目标宽高比：旋转 90/270 时宽高互换，比例取倒数 */
 export function cropAspectFor(frame: Pick<Frame, "w" | "h">, rotation: Rotation): number {
   const swapped = rotation === 90 || rotation === 270;
   const fw = Math.max(1e-6, frame.w);
@@ -76,13 +69,12 @@ export function moveCrop(start: NormRect, dx: number, dy: number): NormRect {
 /**
  * 拖动控制点改变裁剪框。
  *
- * @param start  拖动开始时的裁剪框（归一化）
- * @param kind   控制点方位
- * @param px,py  指针当前位置（归一化，越界会被夹回源图）
- * @param aspect 目标宽高比（`cropAspectFor` 的结果）
- * @param min    最小边长（归一化），防止拖成零面积
+ * 角点固定对角，边点固定另一轴的中线，与常见设计工具一致，
+ * 避免拖动左边时整块上下跳动。
  *
- * 角点：对角固定；边点：垂直方向中线固定（与常见设计工具一致，避免"拉左边整块上下乱跳"）。
+ * @param px,py 指针当前位置（归一化，越界会夹回源图）
+ * @param aspect 目标宽高比，取 cropAspectFor 的结果
+ * @param min 最小边长（归一化），防止拖成零面积
  */
 export function resizeCrop(
   start: NormRect,
@@ -147,8 +139,7 @@ export function resizeCrop(
 }
 
 /**
- * 首屏裁剪框：以当前显示区域为起点（即 coverCrop 之后的实际可见范围），
- * 这样"进入裁剪"时框住的就是用户此刻看到的那一块，不会突然变成全图。
+ * 首屏裁剪框：以当前可见区域为起点，进入裁剪时框住的就是用户此刻看到的那一块。
  */
 export function initialCropNorm(visible: CropRect, source: { w: number; h: number }): NormRect {
   return shiftInside(toNorm(visible, source));

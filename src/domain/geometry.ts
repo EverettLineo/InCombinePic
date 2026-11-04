@@ -1,8 +1,8 @@
 /**
- * 纯几何计算。无副作用、无外部依赖，可 100% 单测覆盖。
+ * 纯几何计算，无副作用、无外部依赖。
  *
- * 变换语义见 docs/ARCHITECTURE.md §4：crop → flip → rotate → fit → composite → clip
- * 这里只负责其中 rotate 后的尺寸换算与 fit 计算。
+ * 变换顺序固定为 crop → flip → rotate → fit → composite → clip（见 docs/ARCHITECTURE.md）。
+ * 本文件负责其中 rotate 后的尺寸换算与 fit 计算。
  */
 
 import type { FitMode, Frame, Rotation } from "./types";
@@ -26,11 +26,10 @@ export interface FitResult {
 /**
  * 把源尺寸适配进目标框。
  *
- * - `fill`：等比放大至完全覆盖目标框，超出部分将被裁切（不改变 crop 数据）
+ * - `fill`：等比放大至完全覆盖目标框，超出部分裁切（不改变 crop 数据）
  * - `contain`：等比缩放至完整可见，剩余区域露出背景
  *
- * 关键约定：本函数**只做计算，不回写**任何裁剪数据。适配产生的裁切与用户裁剪
- * 是两层，混写会导致切换模板后丢失用户裁剪（docs/ARCHITECTURE.md §4）。
+ * 只做计算，不回写裁剪数据：适配产生的裁切与用户裁剪是两层，混写会让切换模板后丢失用户裁剪。
  */
 export function fitInto(
   srcW: number,

@@ -5,7 +5,7 @@ use std::fs;
 use std::path::Path;
 
 /// 探测结果：单文件要么成功带元信息，要么失败带可读原因。
-/// 批量导入时**永远不因单个文件失败而整体失败**（基线 §6.3）。
+/// 批量导入时永远不因单个文件失败而整体失败。
 #[derive(Debug, Serialize)]
 pub struct ProbeOutcome {
     pub path: String,
@@ -130,7 +130,7 @@ pub fn probe_one(path_str: &str) -> ProbeOutcome {
     };
 
     // 先用文件头判断格式，再解码。两步都要做：
-    // T0.8 实测证明截断文件的 guess_format 仍会返回 Png，只有解码才会暴露问题。
+    // 实测截断文件的 guess_format 仍会返回 Png，只有解码才会暴露问题。
     let head = match fs::read(path) {
         Ok(b) => b,
         Err(e) => {
@@ -248,12 +248,11 @@ pub fn decode_oriented(path: &Path) -> Result<image::DynamicImage, AppError> {
 
 /// 解码并编码为 PNG 字节，可按最长边缩放。
 ///
-/// 用途：把位图以 `blob:` 形式交给前端渲染。**不能用 asset 协议**——
+/// 用途：把位图以 `blob:` 形式交给前端渲染。不能用 asset 协议：
 /// `asset.localhost` 与页面不同源，用它加载的位图会污染 canvas，
-/// 导出时 `canvas.toBlob` 会直接抛 "Tainted canvases may not be exported"
-/// （2026-10-31 实测于导出流程）。
+/// 导出时 `canvas.toBlob` 会直接抛 "Tainted canvases may not be exported"。
 ///
-/// 选 PNG 而不是 JPEG：导出源必须是**无损**的，否则 JPEG 输出会经历两次有损编码。
+/// 选 PNG 而不是 JPEG：导出源必须无损，否则 JPEG 输出会经历两次有损编码。
 pub fn png_bytes(path: &Path, max_edge: u32) -> Result<(Vec<u8>, u32, u32), AppError> {
     let img = decode_oriented(path)?;
     let (w, h) = (img.width(), img.height());
@@ -530,13 +529,13 @@ mod tests {
     }
 }
 
-/// 压力测试（T12.3）。
+/// 压力测试。
 ///
-/// 默认 `#[ignore]`：常规 `cargo test` 不该被压测拖慢，但这条必须能随时重跑。
+/// 默认 #[ignore]：常规 cargo test 不被压测拖慢，但这条需能随时重跑。
 /// 执行方式：`cargo test --release -- --ignored --nocapture stress`
 ///
-/// 为什么必须在 release 下跑：debug 构建的图像解码慢一个数量级，
-/// 用 debug 数字做容量判断会得出完全错误的结论。
+/// 必须在 release 下运行：debug 构建的图像解码慢一个数量级，
+/// 用它的数字做容量判断会得出错误结论。
 #[cfg(test)]
 mod stress {
     use super::*;
@@ -574,7 +573,7 @@ mod stress {
             .map(|m| m.estimated_rgba_mb)
             .sum();
 
-        println!("---- T12.3 50 张 3000×2000 JPEG ----");
+        println!("---- 50 张 3000×2000 JPEG ----");
         println!("生成耗时      : {:.2?}", gen_time);
         println!(
             "探测总耗时    : {:.2?}（{:.1} ms/张）",
@@ -598,7 +597,7 @@ mod stress {
     }
 }
 
-/// 风险阈值的边界用例（对应 T12.2 的「超大」一类）。
+/// 风险阈值的边界用例（超大类）。
 ///
 /// 不造真图：40 MP 的位图要 160 MB 内存，而这里要验的只是两个数的比较。
 #[cfg(test)]

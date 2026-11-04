@@ -32,6 +32,13 @@
   "bundle": {
     "active": true,
     "targets": ["nsis"],
+    "publisher": "Everett Lineo",
+    "copyright": "Copyright © 2026 Everett Lineo. Licensed under the MIT License.",
+    "license": "MIT",
+    "category": "Photography",
+    "shortDescription": "本地图片拼接工具：模板布局与自由画布",
+    "longDescription": "In拼图·何罗鱼是一款 Windows 本地图片拼接工具。导入多张图片，用模板或自由画布排版，导出 PNG / JPEG。全部处理在本机完成，应用运行期不发起网络请求。",
+    "homepage": "https://github.com/EverettLineo",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",

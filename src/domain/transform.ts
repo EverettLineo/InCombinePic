@@ -1,8 +1,8 @@
 /**
- * 实例变换几何（docs/ARCHITECTURE.md §4 的唯一语义来源）。
+ * 实例变换几何的唯一实现。
  *
- * 绘制顺序固定：crop → flip → rotate → fit → composite → clip
- * 预览（Konva）与未来的条带导出都调用本文件，禁止各自实现一套。
+ * 绘制顺序固定为 crop → flip → rotate → fit → composite → clip，
+ * 预览与导出共用本文件，不得各自实现一套。
  */
 
 import type { CropRect, Frame, Rotation } from "./types";
@@ -12,7 +12,7 @@ import { rotateSize } from "./geometry";
 
 export interface CoverCropResult {
   crop: CropRect;
-  /** 未旋转坐标系下的绘制尺寸（Konna node 的 width/height） */
+  /** 未旋转坐标系下的绘制尺寸（Konva 节点的 width / height） */
   drawW: number;
   drawH: number;
   /** 缩放比 = 目标框尺寸 / 旋转后内容尺寸 */
@@ -20,11 +20,9 @@ export interface CoverCropResult {
 }
 
 /**
- * 计算"填满目标框"所需的裁剪。
+ * 计算填满目标框所需的裁剪。
  *
- * 关键约定：**只读 crop，不回写 crop**。
- * 适配裁切与用户裁剪是两层，混写会导致切换模板后丢失用户裁剪
- * （docs/ARCHITECTURE.md §4）。
+ * 只读 crop，不回写：适配裁切与用户裁剪是两层数据，混写会让切换模板后丢失用户裁剪。
  */
 export function coverCrop(
   crop: CropRect,
@@ -70,9 +68,9 @@ export function coverCrop(
 }
 
 /**
- * "完整显示"适配（T8.7）：不裁切，等比缩放到框内，框内剩余部分露出画布背景。
+ * 完整显示适配：不裁切，等比缩放到框内，剩余部分露出画布背景。
  *
- * 与 coverCrop 的差别只在缩放比取 `min` 而不是 `max`，且完全不改 crop。
+ * 与 coverCrop 的差别只在缩放比取 min 而非 max，且完全不改 crop。
  */
 export function containCrop(
   crop: CropRect,
@@ -93,11 +91,10 @@ export function containCrop(
 }
 
 /**
- * 把"源图像素"裁剪映射为"已加载位图"的坐标。
+ * 把源图像素裁剪换算为已加载位图的坐标。
  *
- * 显示用的是降采样预览图（最长边 2048），而 crop 存的是源图像素。
- * 直接把 4000px 宽的 crop 交给 2048px 宽的位图会让 Konva 采样到图像外，
- * 表现为大图整张空白或错位——这一步转换不能省。
+ * 预览位图按最长边 2048 降采样，crop 存的却是源图像素。
+ * 直接使用会让 Konva 采样到图像之外，表现为大图空白或错位。
  */
 export function toImageCrop(crop: CropRect, pixelScale: number): CropRect {
   const s = pixelScale > 0 && Number.isFinite(pixelScale) ? pixelScale : 1;
@@ -106,8 +103,9 @@ export function toImageCrop(crop: CropRect, pixelScale: number): CropRect {
 
 /**
  * 实例在画布坐标系中的中心点。
- * Konva 用 offset 把节点锚点移到中心，因此旋转围绕 frame 中心进行，
- * 与 ARCHITECTURE.md §4「frame 是轴对齐显示框，旋转只作用于内容」一致。
+ *
+ * Konva 通过 offset 把节点锚点移到中心，旋转因此围绕 frame 中心进行，
+ * 与「frame 是轴对齐显示框、旋转只作用于内容」的约定一致。
  */
 export function frameCenter(frame: Frame): { cx: number; cy: number } {
   return { cx: frame.x + frame.w / 2, cy: frame.y + frame.h / 2 };

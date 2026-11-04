@@ -40,9 +40,9 @@ function TemplateThumb({ t }: { t: TemplateDef }) {
 }
 
 /**
- * 模板面板（T8.1 / T8.2 / T8.7）。
+ * 模板面板。
  *
- * 切换模板直接走 `commit`：整个重排是一个快照，天然满足"原子撤销"（基线 §9.4 第 9 条）。
+ * 切换模板直接走 `commit`：整个重排是一个快照，天然满足"原子撤销"。
  * 不做二次确认——有撤销兜底，加确认只会让试模板变慢。
  */
 export function TemplatePanel() {

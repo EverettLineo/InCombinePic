@@ -2,11 +2,10 @@ import { useEffect, useState } from "react";
 import { prepareThumbnail, toAssetUrl } from "../platform/ipc";
 
 /**
- * 缩略图加载器（资源库与图层列表共用）。
+ * 缩略图加载器，资源库与图层列表共用。
  *
- * 为什么要限并发：生成缩略图需要先把原图完整解码。
- * 50 张 8000×6000 的图若同时解码，峰值内存会到 9 GB 量级，
- * 直接把应用拖死（T0.8 实测单张 RGBA 183 MB）。
+ * 生成缩略图需要先完整解码原图，50 张 8000×6000 同时解码峰值可达 9 GB，
+ * 因此限制并发。
  */
 const MAX_CONCURRENT = 3;
 let running = 0;

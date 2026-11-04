@@ -172,7 +172,7 @@ describe("commitNoHistory（资源释放路径）", () => {
   });
 });
 
-describe("图像属性进撤销栈（T7.7）", () => {
+describe("图像属性进撤销栈", () => {
   it("透明度/边框/圆角/裁剪的修改都可撤销", () => {
     const { commit } = useDocStore.getState();
     commit((d) => addInstance(d, inst("a")), { label: "添加图片" });
@@ -228,7 +228,7 @@ describe("图像属性进撤销栈（T7.7）", () => {
   });
 });
 
-describe("模板切换的原子性与可逆性（T8.9）", () => {
+describe("模板切换的原子性与可逆性", () => {
   it("一次切换 = 一步撤销；撤销完整恢复模板与实例属性；重做恢复切换后状态", async () => {
     const { applyTemplate, fillSourcesOf, findTemplate } = await import("../domain/templates");
     const t = findTemplate("grid-2x2")!;
@@ -285,7 +285,7 @@ describe("模板切换的原子性与可逆性（T8.9）", () => {
   });
 });
 
-describe("画布属性进撤销栈（T9.6）", () => {
+describe("画布属性进撤销栈", () => {
   it("背景切换、渐变参数、画布尺寸都可撤销", async () => {
     const { setBackground, setCanvasSize } = await import("../domain/document");
     const { commit } = useDocStore.getState();
@@ -309,7 +309,7 @@ describe("画布属性进撤销栈（T9.6）", () => {
     expect(useDocStore.getState().doc.canvas.background).toEqual({ type: "white" });
   });
 
-  it("画布尺寸变化不移动已有实例（基线 §5.3）", async () => {
+  it("画布尺寸变化不移动已有实例", async () => {
     const { setCanvasSize, addInstance } = await import("../domain/document");
     const { commit } = useDocStore.getState();
     commit((d) => addInstance(d, inst("a")), { label: "添加图片" });

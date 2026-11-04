@@ -4,7 +4,7 @@ import { useDocStore } from "../state/docStore";
 import { useExportStore } from "../state/exportStore";
 import { useViewStore } from "../state/viewStore";
 
-/** 焦点在可编辑控件上时，所有全局快捷键都让位给文本编辑（T11.2） */
+/** 焦点在可编辑控件上时，所有全局快捷键都让位给文本编辑 */
 function isEditable(target: EventTarget | null): boolean {
   const el = target as HTMLElement | null;
   if (!el) return false;
@@ -13,20 +13,10 @@ function isEditable(target: EventTarget | null): boolean {
 }
 
 /**
- * 全局快捷键（T11.1）——全项目**唯一**的快捷键入口。
+ * 全局快捷键的唯一实现入口。
  *
- * 集中在一处的理由：分散成多个监听器时，"Esc 先关弹窗还是先取消选择"这类
- * 优先级问题会变成监听器注册顺序问题，改一次就错一次。
- *
- * | 快捷键 | 行为 |
- * | --- | --- |
- * | Ctrl+Z / Ctrl+Y / Ctrl+Shift+Z | 撤销 / 重做 |
- * | Ctrl+A | 全选画布实例（输入框内仍是选中文本） |
- * | Ctrl+O | 导入图片 |
- * | Ctrl+E | 打开导出面板 |
- * | Delete / Backspace | 删除选中实例（可撤销，不删资源） |
- * | Esc | 关弹窗 → 取消选择（逐级退让） |
- * | Alt（按住） | 临时关闭智能吸附（画布内生效） |
+ * 集中在一处：分散成多个监听器时，「Esc 先关弹窗还是先取消选择」这类优先级问题
+ * 会退化成监听器注册顺序问题。键位清单见 docs/SHORTCUTS.md。
  */
 export function useAppShortcuts() {
   useEffect(() => {
@@ -41,7 +31,7 @@ export function useAppShortcuts() {
 
       if (e.key === "Escape") {
         e.preventDefault();
-        // T11.6：先取消当前编辑/交互，再取消选择
+        // 先取消当前编辑与交互，再取消选择
         if (view.cropEditor) {
           view.closeCropEditor();
           return;
@@ -102,7 +92,7 @@ export function useAppShortcuts() {
       if ((e.key === "Delete" || e.key === "Backspace") && !modalOpen) {
         if (view.selection.length === 0) return;
         e.preventDefault();
-        // 删除的是画布实例：可撤销，且不删除资源库条目（基线 §7.3）
+        // 删除的是画布实例：可撤销，且不删除资源库条目
         docStore.commit((d) => removeInstances(d, view.selection), { label: "删除实例" });
         view.clearSelection();
       }

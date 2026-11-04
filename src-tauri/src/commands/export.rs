@@ -1,11 +1,11 @@
-//! 导出管线（T10.1~T10.10）。
+//! 导出管线。
 //!
 //! 分工：
-//! - 前端用 Konva 逐条带渲染（与预览同一套代码，差分风险最低），把每条条带编码成 PNG；
+//! - 前端用 Konva 逐条带渲染（与预览同一套代码），把每条条带编码成 PNG；
 //! - 本模块负责解码条带、拼进整幅 RGBA 缓冲、按目标格式编码并落盘。
 //!
-//! 为什么不在 Rust 里重画一遍：预览与导出的一致性只能靠"同一套渲染代码"保证，
-//! 重写一套几何意味着 P3/P7 的裁剪、圆角、边框规则要在两处维护（ADR-0008）。
+//! 不在 Rust 重画：预览与导出一致性只能靠同一套渲染代码保证，
+//! 重写几何意味着裁剪、圆角、边框规则要在两处维护（见 docs/adr/ADR-0008）。
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -19,7 +19,7 @@ use tauri::State;
 
 use crate::error::{AppError, ErrorCode};
 
-/// 单边像素上限（基线 §12.2）
+/// 单边像素上限
 pub const MAX_EDGE: u32 = 20_000;
 /// 整幅 RGBA 缓冲上限：超过则拒绝，避免把机器拖进交换区
 pub const MAX_RGBA_BYTES: u64 = 512 * 1024 * 1024;
@@ -83,7 +83,7 @@ impl Job {
 
     /// 把一条条带写进整幅缓冲。
     ///
-    /// `rows` 是**实际写入**的行数；条带图可能比它高 1 行（重叠），多出的行丢弃，
+    /// `rows` 是实际写入的行数；条带图可能比它高 1 行（重叠），多出的行丢弃，
     /// 否则相邻条带会重复一行像素。
     fn write_strip(&mut self, row_start: u32, rows: u32, rgba: &[u8]) -> Result<(), AppError> {
         if rows == 0 {
@@ -174,8 +174,8 @@ pub async fn export_begin(
 
 /// 写入一条条带。`png_base64` 是前端条带画布导出的 PNG（可能比 rows 多 1 行重叠）
 ///
-/// 声明为 `async`：Tauri 的**同步**命令在主线程执行，PNG 解码是重活，
-/// 放在主线程会让窗口在导出期间卡住（违反 G10「导出中拖动画布不卡顿」）。
+/// 声明为 `async`：Tauri 的同步命令在主线程执行，而 PNG 解码是重活，
+/// 放在主线程会让窗口在导出期间卡住。
 #[tauri::command]
 pub async fn export_write_strip(
     state: State<'_, ExportState>,
@@ -435,7 +435,7 @@ mod tests {
     }
 }
 
-/// 压力测试（T12.4）：20,000 px 导出的真实成本。
+/// 压力测试：20,000 px 导出的真实成本。
 ///
 /// 默认 `#[ignore]`，执行方式：
 /// `cargo test --release -- --ignored --nocapture twenty_thousand`
@@ -527,7 +527,7 @@ mod stress {
 
         let buf_mb = job.buf.len() / 1024 / 1024;
         let peak_mb = (job.buf.len() + png.len()) / 1024 / 1024;
-        println!("---- T12.4 2400×20000 导出（渐变+噪声，接近照片熵）----");
+        println!("---- 2400×20000 导出（渐变+噪声，接近照片熵）----");
         println!("分配缓冲        : {:.2?}（{buf_mb} MB）", alloc);
         println!("写入 {strips} 条条带  : {:.2?}", fill);
         println!("PNG 编码        : {:.2?} → {} MB", png_time, png.len() / 1024 / 1024);

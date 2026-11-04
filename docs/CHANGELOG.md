@@ -6,6 +6,40 @@
 
 ---
 
+## 2026-11-03 · 发布准备：仓库卫生、README 与许可证信息
+
+**仓库卫生**
+
+- `.gitignore` 补全：系统杂项（`Thumbs.db` / `Desktop.ini` / `$RECYCLE.BIN`）、编辑器（`.fleet` / `*.tsbuildinfo` / `.eslintcache`）、环境变量（`.env*`，保留 `.env.example`）、构建缓存（`.vite`）、临时文件、本地测试启动入口
+- 与 `src-tauri/.gitignore` 形成双保险，避免 `target/` 被误提交
+
+**README**
+
+- 重写为发布级文档：定位与不做的事、能力表、典型工作流、环境要求、质量门禁与三条架构边界、构建产物实测尺寸、性能实测数据、数据与隐私、架构与数据流、已知限制、项目状态、文档索引、FAQ、许可范围
+- 删除原文中重复出现的作者行；状态表述改为「候选版本，未正式发布」，不夸大为可发布
+
+**许可证**
+
+- 新增 `NOTICE.md`：明确代码（MIT）与品牌资产（名称 / 图标 / 品牌带 / 释义文字）的授权边界，并声明无担保
+- `THIRD_PARTY_NOTICES.md` 按 `Cargo.lock` / `package-lock.json` 实测版本重写：更正 `image` / `fast_image_resize` 为双许可（本项目择 MIT，免 Apache NOTICE）、补充 MPL-2.0 传递依赖披露与许可证分布统计
+- `ADR-0002` 追加第 6 节，记录上述更正与 MPL 事实，主决策不变
+
+**发布元数据**
+
+- `tauri.conf.json` 的 `bundle` 增加 `publisher` / `copyright` / `license` / `category` / `shortDescription` / `longDescription` / `homepage`，使安装包与「应用和功能」列表显示正确的发布者与版权
+
+**验证**
+
+- `npm run typecheck`、`npm run lint` 0 错误 0 警告；`npm test` 263 项通过
+- `npx tauri info` 可正常解析新配置
+- 重新打包（4 分 00 秒）成功：`pintu.exe` 7,915,008 B、安装包 2,383,814 B；`pintu.exe` 的 Company / Copyright 正确，`installer.nsi` 中 `MANUFACTURER="Everett Lineo"` 并写入卸载项 `Publisher`
+
+**未验证**
+
+- 安装向导逐屏观感与「应用和功能」中的实际显示 —— 需在干净机器上装一次（同安装/卸载验证）
+
+---
+
 ## 2026-11-03 · v0.2.0 品牌化与性能收口
 
 **品牌**

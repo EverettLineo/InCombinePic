@@ -5,10 +5,10 @@ import type { AppErrorPayload } from "../platform/ipc";
 export type ExportStatus = "idle" | "running" | "done" | "error";
 
 /**
- * 导出任务状态（T10.2 / T10.8）。
+ * 导出任务状态。
  *
  * 与 docStore 完全隔离：导出过程不得修改文档，失败也不得清除编辑状态
- * （基线 §12.5）。这里只放"任务进度与结果"。
+ * 。这里只放"任务进度与结果"。
  */
 export interface ExportStore {
   status: ExportStatus;

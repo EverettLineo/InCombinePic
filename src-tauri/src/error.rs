@@ -1,9 +1,9 @@
 use serde::Serialize;
 
-/// 统一错误模型（架构文档 §6）
+/// 统一错误模型
 ///
 /// 约定：
-/// - `code` 为稳定的枚举字符串，前端据此分支，**不要解析 message**
+/// - `code` 为稳定的枚举字符串，前端据此分支，不要解析 message
 /// - `message` 为面向用户的中文文案，可直接展示
 /// - `hint` 为可执行的下一步建议，可为空
 #[derive(Debug, Serialize)]
@@ -38,7 +38,7 @@ impl AppError {
         self
     }
 
-    /// HEIC/HEIF 专用：v1 明确不支持，须给出可执行建议（基线 §6.1）
+    /// HEIC/HEIF 专用：v1 明确不支持，须给出可执行建议
     pub fn heic_unsupported() -> Self {
         Self::new(
             ErrorCode::UnsupportedFormat,

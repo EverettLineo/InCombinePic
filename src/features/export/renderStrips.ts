@@ -1,11 +1,9 @@
 /**
- * 条带渲染（T10.2）：把画布场景按行区间渲染成 PNG。
+ * 条带渲染：把画布场景按行区间渲染为 PNG。
  *
- * 为什么在**前端**渲染而不是 Rust 重画：
- * 预览用的是 Konva 投影（derive → syncLayer），导出若在 Rust 重写一遍几何，
- * 裁剪、圆角、边框、旋转的规则要在两处维护，差分验收迟早过不了（ADR-0008）。
- *
- * 条带化是为了绕开画布尺寸与内存限制：一次只渲染 2048 行，20,000 px 也能稳住。
+ * 渲染留在前端，与预览共用同一套几何：若在 Rust 重写一遍，裁剪、圆角、边框、旋转的规则
+ * 要在两处维护，像素一致性迟早失守（见 docs/adr/ADR-0008）。
+ * 条带化用于绕开画布尺寸与内存限制，一次只渲染 2048 行。
  */
 
 import Konva from "konva";
@@ -85,7 +83,7 @@ export async function renderStripBase64(opts: StripRenderOptions): Promise<strin
       syncBackground(bg, doc.canvas);
     }
 
-    // 与预览同一处裁切：内容超出画布的部分不进入导出（基线 §10.2）
+    // 与预览同一处裁切：内容超出画布的部分不进入导出
     content.clip({ x: 0, y: 0, width: canvasW, height: canvasH });
     syncLayer(content, deriveScene(doc, sources));
 

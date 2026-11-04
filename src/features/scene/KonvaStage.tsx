@@ -235,7 +235,7 @@ export function KonvaStage({
       }
 
       if (dragging) {
-        // 按住 Alt 临时关闭吸附（D-04 / T6.7），便于精细摆放
+        // 按住 Alt 临时关闭吸附，便于精细摆放
         moveRef.current(p.x - dragOrigin.x, p.y - dragOrigin.y, !e.altKey);
         return;
       }

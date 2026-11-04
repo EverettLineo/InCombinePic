@@ -36,7 +36,7 @@ const DIST_BUTTONS: Array<{ axis: DistributeAxis; label: string; title: string }
 ];
 
 /**
- * 多选编排条（T6.2 / T6.4）。
+ * 多选编排条。
  *
  * 只在选中 2 个及以上对象时出现：单选对齐没有语义（对齐基准是选中范围本身），
  * 与其显示一排永远灰着的按钮，不如不出现。

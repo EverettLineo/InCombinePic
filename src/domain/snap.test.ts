@@ -71,7 +71,7 @@ describe("snapMove", () => {
     expect(r.dy).toBe(0);
   });
 
-  it("threshold=0 时完全禁用吸附（Alt 临时关闭，T6.7）", () => {
+  it("threshold=0 时完全禁用吸附（按住 Alt 临时关闭）", () => {
     const doc = docOf([]);
     const r = snapMove(doc, ["a"], [f(3, 100, 200, 150)], 0, 0, 0);
     expect(r.dx).toBe(0);

@@ -1,8 +1,7 @@
 /**
- * Konva 适配层：把 SceneDescriptor 投影到 Konva 节点树。
+ * Konva 适配层：把 SceneDescriptor 投影为 Konva 节点树。
  *
- * 这是全项目唯一 import Konva 的地方（eslint 强制）。
- * 节点树是**投影**，随时可以整体重建；文档状态永远是真相。
+ * 全项目唯一 import Konva 的地方，由 eslint 强制。节点树可随时整体重建，文档状态才是数据源。
  */
 
 import Konva from "konva";
@@ -31,7 +30,7 @@ const HANDLE_SIZE_PX = 7;
 /** Group → 其子节点引用。用 WeakMap 避免每次同步都做选择器查找 */
 const bundles = new WeakMap<Konva.Group, { image: Konva.Image; border: Konva.Rect }>();
 
-/** 棋盘格仅用于透明背景的预览提示，不是用户可选的背景类型（基线 §10.1） */
+/** 棋盘格仅用于透明背景的预览提示，不是用户可选的背景类型 */
 function makeCheckerPattern(): HTMLCanvasElement {
   const size = 16;
   const c = document.createElement("canvas");
@@ -153,8 +152,7 @@ export function syncLayer(layer: Konva.Layer, scene: SceneDescriptor): void {
     if (r.scale <= 0) return;
     const { cx, cy } = frameCenter(n.frame);
 
-    // 模板模式下挂到所属单元格容器里：容器 clip 到格子，
-    // 图片放大/拖动超出格子的部分被裁掉，不会压到相邻格（2026-10-31 反馈）
+    // 模板模式下挂到所属单元格容器：容器 clip 到格子，超出部分被裁掉，不会压到相邻格
     const cellGroup = n.cell ? layout.cells.get(cellKey(n.cell)) : undefined;
     const parent: Konva.Container = cellGroup ?? layer;
     const originX = n.cell ? n.cell.x : 0;
@@ -203,7 +201,7 @@ export function syncLayer(layer: Konva.Layer, scene: SceneDescriptor): void {
       roundedRectPath(ctx, -halfW, -halfH, n.frame.w, n.frame.h, n.cornerRadius);
     });
 
-    // 边框画在显示框**内侧**：格子是拼接的基本单元，向外画会压到相邻图（ADR-0006）
+    // 边框画在显示框内侧：格子是拼接的基本单元，向外画会压到相邻图（ADR-0006）
     const bw = Math.max(0, n.border.width);
     border.visible(bw > 0);
     if (bw > 0) {
@@ -255,7 +253,7 @@ function roundedRectPath(
   ctx.closePath();
 }
 
-/** 画布边界线：帮助用户看清导出范围，不导出（基线 §10.2） */
+/** 画布边界线：帮助用户看清导出范围，不导出 */
 export function syncCanvasOutline(layer: Konva.Layer, canvas: CanvasSpec) {
   let rect = layer.findOne<Konva.Rect>("#canvas-outline");
   if (!rect) {
@@ -309,7 +307,7 @@ export function syncSelection(
     );
   }
 
-  // 仅在单选时显示控制点：多选的批量缩放按基线不在 v1 范围（§8.1）
+  // 仅在单选时显示控制点：多选的批量缩放不在 v1 范围
   if (targets.length === 1) {
     const size = HANDLE_SIZE_PX / (zoom || 1);
     for (const hp of handlePoints(targets[0].frame)) {
@@ -332,7 +330,7 @@ export function syncSelection(
 }
 
 /**
- * 对齐辅助线（T6.6）：只在视图上画，**不进导出**（基线 §10.2）。
+ * 对齐辅助线：只在视图上画，不进导出。
  * 线宽 1px 且不随缩放变化，避免放大后辅助线变成色块。
  */
 export function syncGuides(layer: Konva.Layer, guides: readonly SnapGuide[]): void {
@@ -359,7 +357,7 @@ export function syncGuides(layer: Konva.Layer, guides: readonly SnapGuide[]): vo
 }
 
 /**
- * 空白单元格占位（T8.4 / T8.5）：虚线框 + 淡底，告诉用户"这里可以放图"。
+ * 空白单元格占位：虚线框 + 淡底，告诉用户"这里可以放图"。
  * 画在背景层，图片覆盖其上；不进导出。
  */
 export function syncEmptyCells(

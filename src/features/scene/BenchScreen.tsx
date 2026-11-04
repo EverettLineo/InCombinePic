@@ -3,7 +3,7 @@ import { saveBenchAndQuit } from "../../platform/ipc";
 import { runCanvasBench } from "./bench";
 
 /**
- * 基准模式界面（T3.7）。
+ * 基准模式界面。
  * 由环境变量 PINTU_BENCH=1 触发，正常运行不会进入此分支。
  */
 export function BenchScreen() {

@@ -6,11 +6,10 @@ export const MIN_ZOOM = 0.05;
 export const MAX_ZOOM = 8;
 
 /**
- * 视图域 store —— 缩放、平移、选中。
+ * 视图 store：缩放、平移、选中。
  *
- * 硬约束（基线 §4.2、§5.3）：
- * 视图状态**不进入撤销历史、不持久化、不影响导出像素尺寸**。
- * 因此本 store 与 docStore 完全隔离，任何"选中变化"都不应产生撤销记录。
+ * 视图状态不进入撤销历史、不持久化、不影响导出像素，因此与 docStore 完全隔离，
+ * 选中变化不产生撤销记录。
  */
 export type RightTab = "props" | "layers" | "canvas" | "templates";
 

@@ -6,10 +6,10 @@ import { useViewStore } from "../../state/viewStore";
 import { NumberField } from "../../ui/NumberField";
 
 /**
- * 右侧属性面板内容（T5.5 位置尺寸 / T7.2 裁剪数值 / T7.4~T7.6 透明度、边框、圆角）。
+ * 右侧属性面板内容。
  * 容器与标签页由 app/RightPanel 提供；本组件只负责内容。
  *
- * 所有修改都走 `commit`，因此天然进撤销栈（T7.7）。
+ * 所有修改都走 `commit`，因此天然进撤销栈。
  * 滑块与取色器连续触发，用 `mergeKey` 合并为一步，松手/失焦时 `endMerge`。
  */
 export function InspectorPanel() {
