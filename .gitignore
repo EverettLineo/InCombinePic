@@ -65,6 +65,8 @@ src-tauri/gen/
 启动 In拼图·何罗鱼.exe
 *.tmp
 *.bak
+# npm pack 产物
+*.tgz
 *.exe
 # 会话工作数据（不属于交付物）
 .workbuddy/

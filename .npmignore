@@ -1,0 +1,31 @@
+# 发布到 npm 包时排除的内容。
+# 有 .npmignore 时 npm 不再读 .gitignore，因此构建产物与本地文件要在这里全部列出。
+node_modules/
+dist/
+dist-ssr/
+coverage/
+src-tauri/target/
+src-tauri/gen/
+.workbuddy/
+logs/
+*.log
+
+# 本地启动入口（符号链接，仅本机有效）
+启动 In拼图·何罗鱼.exe
+
+# 系统与编辑器杂项
+Thumbs.db
+Desktop.ini
+.DS_Store
+.vscode/
+.idea/
+*.swp
+
+# CI 配置与本地忽略规则不属于包内容
+.github/
+.gitignore
+.npmignore
+
+# 环境变量
+.env
+.env.*
