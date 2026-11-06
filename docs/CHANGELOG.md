@@ -6,6 +6,57 @@
 
 ---
 
+## 2026-11-04 · npm 包分发（GitHub Packages）
+
+**变更**
+
+- `package.json` 改为带作用域的名称 `@everettlineo/pintu`，新增 `publishConfig`：registry 固定为 GitHub Packages，访问级别 `restricted`；移除 `private` 以允许发布
+- 新增 `.npmrc`：只声明 `@everettlineo:registry`，不含任何令牌
+- 新增 `.npmignore`：排除 `node_modules`、`dist`、`src-tauri/target`、`src-tauri/gen` 与本地入口，打包体积 2.9 MB / 143 个文件
+- 新增 `.github/workflows/publish-package.yml`：推送 `v*` tag 或手动触发；`packages: write` + `GITHUB_TOKEN`；发布前校验 tag 与版本一致、跑 typecheck 与测试、`npm pack --dry-run` 预检
+- 新增 `docs/PUBLISHING.md`：本地与 CI 认证、发布、安装、令牌管理与排错
+
+**修复**
+
+- `package-lock.json` 根名称与版本停留在 `pintu@0.1.0`，与 `package.json` 不一致；已同步为 `@everettlineo/pintu@0.2.0`
+
+**验证**
+
+- `npm config get @everettlineo:registry` 返回 `https://npm.pkg.github.com`
+- `npm publish --dry-run` 指向 GitHub Packages、`restricted`，包内含源码与文档，无构建产物
+- typecheck / lint / 263 项用例通过
+
+**关联**
+
+- 仓库：`https://github.com/EverettLineo/InCombinePic`（public，默认分支 `main`）
+- `package.json` 的 `repository` / `bugs` / `homepage` 已指向该仓库，发布后包自动关联并继承权限
+
+**未验证**
+
+- 真实发布：需推送 `v0.2.0` tag 触发工作流，或在本地用带 `write:packages` 的 classic PAT 登录后手动发布
+
+---
+
+## 2026-11-04 · 构建分包
+
+**变更**
+
+- `vite.config.ts` 使用 Rolldown 的 `output.codeSplitting.groups` 把第三方依赖拆为独立 chunk：react 218.7 kB、konva 189.2 kB、vendor 20.0 kB，应用代码 99.9 kB
+- 原先单块 529.1 kB 触发 Vite 的 500 kB 体积警告，分包后不再出现
+- 依赖块变动少，可长期命中缓存；应用代码改动不再让整包失效
+
+**验证**
+
+- `npm run build` 通过，无体积警告
+- 重新打包（4 分 09 秒）后以基准模式运行：Konva 10.9.0 从独立 chunk 正常加载，50 实例渲染 p95 1.2~1.3 ms，应用写出结果后自行退出
+- 安装包 2,385,699 B；`pintu.exe` 7,916,544 B
+
+**未验证**
+
+- 冷启动首屏时间与分包前无对比数据，未做量化
+
+---
+
 ## 2026-11-03 · 发布准备：仓库卫生、README 与许可证信息
 
 **仓库卫生**

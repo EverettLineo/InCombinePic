@@ -59,6 +59,15 @@
 
 构建产物为 NSIS 安装包，双击安装，装完从开始菜单启动。安装与卸载只写安装目录、`%APPDATA%\com.everettlineo.pintu`（偏好）与 `%LOCALAPPDATA%\com.everettlineo.pintu`（缩略图缓存），不触碰用户图片目录。
 
+### 分发渠道
+
+| 渠道 | 内容 | 用途 |
+| --- | --- | --- |
+| GitHub Releases | `In拼图·何罗鱼_0.2.0_x64-setup.exe` | 终端用户安装 |
+| GitHub Packages（npm） | 源码包 `@everettlineo/pintu` | 内部复用与审计，**不含可执行文件，不能直接运行** |
+
+npm 渠道的认证、发布与安装步骤见 [`docs/PUBLISHING.md`](./docs/PUBLISHING.md)。
+
 ## 环境要求
 
 | 依赖 | 版本（实测通过） |
@@ -110,7 +119,7 @@ npm run tauri build --no-bundle   # 只出可执行文件
 | 产物 | 路径 | 体积（0.2.0 实测） |
 | --- | --- | --- |
 | 可执行文件 | `src-tauri/target/release/pintu.exe` | 7.55 MiB |
-| 安装包 | `src-tauri/target/release/bundle/nsis/In拼图·何罗鱼_0.2.0_x64-setup.exe` | 2.27 MiB |
+| 安装包 | `src-tauri/target/release/bundle/nsis/In拼图·何罗鱼_0.2.0_x64-setup.exe` | 2.28 MiB |
 
 > 首次打包需联网下载 NSIS 工具链；**应用运行本身完全离线**。
 
@@ -202,7 +211,9 @@ src/
 | [`docs/TEST_REPORT.md`](./docs/TEST_REPORT.md) | 测试结果（通过 / 失败 / 未测试） |
 | [`docs/KNOWN_ISSUES.md`](./docs/KNOWN_ISSUES.md) | 已知问题、规避方式与是否阻断发布 |
 | [`docs/CHANGELOG.md`](./docs/CHANGELOG.md) | 版本变更记录 |
+| [`docs/RELEASE_NOTES_v0.2.0.md`](./docs/RELEASE_NOTES_v0.2.0.md) | 0.2.0 发行说明 |
 | [`docs/RELEASE_CHECKLIST.md`](./docs/RELEASE_CHECKLIST.md) | 发布交付物核对 |
+| [`docs/PUBLISHING.md`](./docs/PUBLISHING.md) | 用 GitHub Packages 分发 npm 包 |
 | [`docs/NEXT_VERSION.md`](./docs/NEXT_VERSION.md) | 下一版本功能提案 |
 | [`THIRD_PARTY_NOTICES.md`](./THIRD_PARTY_NOTICES.md) | 第三方组件与许可证 |
 | [`NOTICE.md`](./NOTICE.md) | 版权与许可范围（含品牌资产说明） |
@@ -224,4 +235,5 @@ src/
 ---
 
 作者：林间Inline（Everett Lineo）
+仓库：<https://github.com/EverettLineo/InCombinePic>
 主页：<https://github.com/EverettLineo> · <https://everettlineo.github.io/> · <everettlineo@gmail.com>

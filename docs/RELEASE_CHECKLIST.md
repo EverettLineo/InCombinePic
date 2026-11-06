@@ -37,10 +37,11 @@
 | 项 | 结果 |
 | --- | --- |
 | 构建命令 | `npx tauri build`（`bundle.targets = ["nsis"]`） |
-| 构建耗时 | 4 分 00 秒（含前端 0.8 s，2026-11-03 重新打包） |
-| 安装包 | `In拼图·何罗鱼_0.2.0_x64-setup.exe`，**2.27 MiB**（2,383,814 字节） |
-| 可执行文件 | `pintu.exe`，**7.55 MiB**（7,915,008 字节） |
-| SHA-256（本次安装包） | `098A943C1D78A52D641CF58C0890610AEB9B3E791D57CFD660A73403E168A259` |
+| 构建耗时 | 4 分 09 秒（含前端 0.7 s，2026-11-04 重新打包） |
+| 安装包 | `In拼图·何罗鱼_0.2.0_x64-setup.exe`，**2.28 MiB**（2,385,699 字节） |
+| 可执行文件 | `pintu.exe`，**7.55 MiB**（7,916,544 字节） |
+| SHA-256（本次安装包） | `59359062D7D520D5F3DDB55C5EE55ECA833A92A469FD4895A5B9706C778BF5BE` |
+| 前端产物 | 按依赖拆分为 react 218.7 kB / konva 189.2 kB / vendor 20.0 kB，应用代码 99.9 kB，无 >500 kB 单块 |
 | 构建后启动 | 已实测：进程存活，工作集 27 MB，无崩溃 |
 | 发布元数据 | **已实测生效**：`pintu.exe` 的 Company=Everett Lineo、Copyright 正确；`installer.nsi` 中 `MANUFACTURER="Everett Lineo"` 并写入卸载项 `Publisher`；`ProductName`/`FileVersion` 为 `In拼图·何罗鱼` / `0.2.0` |
 | 干净环境安装 | **未验证**（需要一台未装过本应用的机器或虚拟机） |
