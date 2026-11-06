@@ -29,4 +29,25 @@ export default defineConfig(() => ({
       ignored: ["**/src-tauri/**"],
     },
   },
+
+  build: {
+    // 第三方依赖单独成块：Konva 与 React 体积大、版本变动少，独立分包后可以长期缓存，
+    // 也避免应用代码与依赖混在同一个 500 kB 以上的 chunk 里。
+    // Rolldown 按 priority 从高到低匹配，未被任何分组捕获的模块仍走自动分包。
+    rolldownOptions: {
+      output: {
+        codeSplitting: {
+          groups: [
+            { name: "konva", test: /node_modules[\\/]konva[\\/]/, priority: 30 },
+            {
+              name: "react",
+              test: /node_modules[\\/](react|react-dom|scheduler)[\\/]/,
+              priority: 20,
+            },
+            { name: "vendor", test: /node_modules[\\/]/, priority: 10 },
+          ],
+        },
+      },
+    },
+  },
 }));
