@@ -64,7 +64,7 @@
 | 渠道 | 内容 | 用途 |
 | --- | --- | --- |
 | GitHub Releases | `In拼图·何罗鱼_0.2.0_x64-setup.exe` | 终端用户安装 |
-| GitHub Packages（npm） | 源码包 `@everettlineo/pintu` | 内部复用与审计，**不含可执行文件，不能直接运行** |
+| GitHub Packages（npm） | 源码包 [`@everettlineo/pintu@0.2.0`](https://github.com/EverettLineo/InCombinePic/pkgs/npm/pintu) | 内部复用与审计，**不含可执行文件，不能直接运行** |
 
 npm 渠道的认证、发布与安装步骤见 [`docs/PUBLISHING.md`](./docs/PUBLISHING.md)。
 

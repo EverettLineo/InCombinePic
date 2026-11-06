@@ -23,6 +23,7 @@
 | 11 | 许可证 | [`LICENSE`](../LICENSE)（MIT）、[`NOTICE.md`](../NOTICE.md)（版权与品牌资产范围） | 完成 |
 | 12 | 第三方许可清单 | [`THIRD_PARTY_NOTICES.md`](../THIRD_PARTY_NOTICES.md)（版本取自锁文件实测） | 完成 |
 | 13 | 安装包发布元数据 | `tauri.conf.json` → `publisher` / `copyright` / `license` / `category` / 描述 / `homepage` | **已配置**，需重新打包生效 |
+| 14 | npm 源码包（GitHub Packages） | `@everettlineo/pintu@0.2.0` | 已发布（2026-11-06 工作流成功，见 [`docs/PUBLISHING.md`](./PUBLISHING.md)） |
 
 补充交付物（非基线要求，但有实际价值）：
 

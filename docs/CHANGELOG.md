@@ -31,9 +31,11 @@
 - 仓库：`https://github.com/EverettLineo/InCombinePic`（public，默认分支 `main`）
 - `package.json` 的 `repository` / `bugs` / `homepage` 已指向该仓库，发布后包自动关联并继承权限
 
-**未验证**
+**发布**
 
-- 真实发布：需推送 `v0.2.0` tag 触发工作流，或在本地用带 `write:packages` 的 classic PAT 登录后手动发布
+- 2026-11-06 推送 `v0.2.0` 标签，工作流 `publish-package` 运行成功（52 秒）
+- 包已上线：`https://github.com/EverettLineo/InCombinePic/pkgs/npm/pintu`
+- 可见性随 public 仓库继承为 public，`publishConfig.access: restricted` 不改变继承结果
 
 ---
 

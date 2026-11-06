@@ -67,7 +67,7 @@ npm install @everettlineo/pintu
 
 - 令牌只出现在两处：用户级 `~/.npmrc` 或 CI 的 secret。项目内任何文件都不得包含令牌。
 - PAT 取最小 scope，启用 2FA；怀疑泄露立即在 GitHub 设置里撤销并重新登录。
-- 包保持 `restricted`；`publishConfig.access` 已固定为 restricted，不要改成 public。
+- 包可见性由所关联的仓库决定：仓库 public 时包也 public（`publishConfig.access` 不改变继承结果）。需要私有包就把仓库改为 private。
 - `publishConfig.registry` 固定为 GitHub Packages，避免手误发到 npmjs.org（发上去即为公开）。
 - 每次发布后检查 Packages 页面的可见性与协作者列表。
 - 删除已发布版本在 GitHub 包页面操作；`npm unpublish` 对已发布版本通常不可用，发布前先用 `--dry-run`。
@@ -90,3 +90,17 @@ npm install @everettlineo/pintu
 | `E409` | 同版本已存在，npm 不允许覆盖 | 升版本后重发 |
 | `EOTP` | 账号开了 2FA 却用密码认证 | 改用 PAT 作为密码 |
 | 提示包名非法 | 未加作用域 | 改为 `@everettlineo/...` |
+
+## 九、发布记录
+
+| 版本 | 时间 | 触发方式 | 结果 |
+| --- | --- | --- | --- |
+| 0.2.0 | 2026-11-06 | 推送 `v0.2.0` 标签 | 工作流 `publish-package` 成功（52 秒），包已上线 |
+
+包地址：<https://github.com/EverettLineo/InCombinePic/pkgs/npm/pintu>
+
+安装（源码包，不含可执行文件）：
+
+```bash
+npm install @everettlineo/pintu
+```
